@@ -14,7 +14,10 @@ We suggest you open [this project file](tsetse_senescence.Rproj) file in [R Stud
 - [**r1_db_funcs.R**](r1_db_funcs.R)
 - [**r1_queries.R**](r1_queries.R) 
 - [**r2_motherDeaths.R**](r2_motherDeaths.R)
-
+- [**r3_abortions.R**](r3_abortions.R) 
+- [**r4_pupalWetWeight.R**](r4_pupalWetWeight.R)
+- [**r5_offspringEmergence.R**](r5_offspringEmergence.R)
+- [**r6_offspringSurvival.R**](r5_offspringSurvival.R)
 
 These files plus the database are explained briefly below:
 
