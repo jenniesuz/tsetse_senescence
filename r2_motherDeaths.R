@@ -1,5 +1,6 @@
 
 # This script produces Figure 2 of the manuscript: Kaplan-Meier & Cox proportional hazards model for female survival
+# also parameteric survival analysis
 
 source("r1_queries.R")   # query database
 
@@ -158,7 +159,7 @@ ggsv <- ggsurvplot(survFit, data=adult.deaths
 grid.arrange(ggsv$plot,hazardPlot,nrow=1)
 dev.off()
 
-#**************************************CPHM***********************************
+#**************************************Cox PHM***********************************
 
 fit.coxph <- coxph(survObj ~ 1,data=adult.deaths)
 fit.coxph1 <- coxph(survObj ~ name , 
@@ -170,8 +171,34 @@ aictab(list(fit.coxph,fit.coxph1))
 AIC(fit.coxph)
 AIC(fit.coxph1)
 
+#****************************************************************************
 
 
+#*********************Parametric analysis*************************************
+nuts <- adult.deaths[adult.deaths$name %in% "nutrition",]
+ctrl <- adult.deaths[adult.deaths$name %in% "control",]
+mate <- adult.deaths[adult.deaths$name %in% "mate_delay",]
+
+survFitexpNut <- survreg(Surv(time=nuts$dayOfDeath,event=nuts$dead) ~ 1, dist="exponential" )
+survFitweibNut <- survreg(Surv(time=nuts$dayOfDeath,even=nuts$dead) ~ 1,dist="weibull")
+AIC(survFitexpNut) 
+AIC(survFitweibNut) 
+Weights(c(AIC(survFitexpNut),AIC(survFitweibNut)))
+
+survFitexpCtrl <- survreg(Surv(time=ctrl$dayOfDeath,event=ctrl$dead) ~ 1, dist="exponential" )
+survFitweibCtrl <- survreg(Surv(time=ctrl$dayOfDeath,even=ctrl$dead) ~ 1,dist="weibull")
+AIC(survFitexpCtrl) 
+AIC(survFitweibCtrl) 
+Weights(c(AIC(survFitexpCtrl),AIC(survFitweibCtrl)))
+
+
+survFitexpMate <- survreg(Surv(time=mate$dayOfDeath,event=mate$dead) ~ 1, dist="exponential" )
+survFitweibMate <- survreg(Surv(time=mate$dayOfDeath,even=mate$dead) ~ 1,dist="weibull")
+AIC(survFitexpMate) 
+AIC(survFitweibMate) 
+Weights(c(AIC(survFitexpMate),AIC(survFitweibMate)))
+
+#*******************************************************************************
 
 
 
