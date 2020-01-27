@@ -3,7 +3,6 @@ source("r1_queries.R")
 
 library(ggplot2)
 library(binom)
-library(nlme)
 library(geepack)
 library(lme4)
 library(AICcmodavg)
@@ -57,6 +56,37 @@ Weights(c(AIC(cMod2),AIC(cMod3),AIC(cMod4)))
 summary(cMod3)
 #*********************************************
 
+#*********************mating delay group**********************
+mate <- mother.larvipositions[mother.larvipositions$name %in% "Mating delay",]
+
+mMod1 <- glmer(abortion ~ mAge + (1+mAge| adults_id)
+               ,family=binomial
+               ,data=mate)  # singular fit
+
+mMod2 <- glmer(abortion ~ mAge + (1| adults_id)
+               ,family=binomial
+               ,data=mate) 
+
+mMod3 <- glm(abortion ~ mAge 
+             ,family=binomial
+             ,data=mate)
+
+
+mMod4 <- glm(abortion ~ 1
+             ,family=binomial
+             ,data=mate)
+
+AIC(mMod2) 
+AIC(mMod3) 
+AIC(mMod4) 
+aictab(list(mMod2))
+aictab(list(mMod3,mMod4), c("mMod3","mMod4"))
+
+Weights(c(AIC(mMod2),AIC(mMod3),AIC(mMod4)))
+
+summary(mMod3)
+#****************************************************************
+
 
 #**********nutritional stress group******
 nuts <- mother.larvipositions[mother.larvipositions$name %in% "Nutritional stress",]
@@ -88,37 +118,6 @@ Weights(c(AIC(nMod2),AIC(nMod3),AIC(nMod4)))
 
 summary(nMod2)
 #***************************************************************
-
-#*********************mating delay group**********************
-mate <- mother.larvipositions[mother.larvipositions$name %in% "Mating delay",]
-
-mMod1 <- glmer(abortion ~ mAge + (1+mAge| adults_id)
-               ,family=binomial
-               ,data=mate)  # singular fit
-
-mMod2 <- glmer(abortion ~ mAge + (1| adults_id)
-               ,family=binomial
-               ,data=mate) 
-
-mMod3 <- glm(abortion ~ mAge 
-             ,family=binomial
-             ,data=mate)
-
-
-mMod4 <- glm(abortion ~ 1
-             ,family=binomial
-             ,data=mate)
-
-AIC(mMod2) 
-AIC(mMod3) 
-AIC(mMod4) 
-aictab(list(mMod2))
-aictab(list(mMod3,mMod4), c("mMod3","mMod4"))
-
-Weights(c(AIC(mMod2),AIC(mMod3),AIC(mMod4)))
-
-summary(mMod3)
-#****************************************************************
 
 #**************************Predict****************
 
