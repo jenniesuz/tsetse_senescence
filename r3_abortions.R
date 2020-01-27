@@ -117,6 +117,10 @@ aictab(list(nMod3,nMod4), c("nMod3","nMod4"))
 Weights(c(AIC(nMod2),AIC(nMod3),AIC(nMod4)))
 
 summary(nMod2)
+
+
+
+
 #***************************************************************
 
 #**************************Predict****************

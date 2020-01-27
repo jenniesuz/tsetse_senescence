@@ -55,7 +55,6 @@ levels(weight.means$name) <- c("Control","Mating delay","Nutritional stress")
 
 weight.means <- weight.means[-10,]
 
-weight.sd^2
 #******************************************************************************************
 nuts <- pupWeight[pupWeight$name %in% "Nutritional stress",]
 ctrl <- pupWeight[pupWeight$name %in% "Control",]
