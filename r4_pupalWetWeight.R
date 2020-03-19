@@ -256,3 +256,28 @@ ggplot(all,aes()) +
   ) +
   facet_wrap(~name,ncol=3,scales="free_x")
 dev.off()
+
+
+
+tiff("FigRawWetweight.tiff", height = 3, width = 6, units = 'in', compression="lzw", res=400)
+ggplot(pupWeight) +
+  geom_point(aes(x=mAgeDays,y=wet_weight)
+              ,size=0.5) +
+  ylab("Offspring wet weight (mg)") +
+  xlab("Mother age (days)") +
+  theme_set(theme_bw()) +
+  theme(axis.line = element_line(color = 'black')
+        ,text=element_text(size=9)
+        ,plot.margin=unit(c(0.2,0.1,0.1,0.1), "cm")
+        ,axis.text=element_text(size=7)
+        ,legend.key.size = unit(0.8,"line")
+        ,legend.background = element_blank()
+        ,legend.text=element_text(size=8)
+        ,legend.position =c(0.2,0.9)
+        ,legend.title = element_blank()
+        ,strip.background = element_rect(colour="white", fill="white")
+        ,panel.border = element_blank()
+  ) +
+  facet_wrap(~name)
+dev.off()
+

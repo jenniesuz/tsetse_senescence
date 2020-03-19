@@ -7,6 +7,7 @@ library(gridExtra)
 library(AICcmodavg)
 library(MuMIn)
 library(lme4)
+library(nlme)
 source("r1_queries.R")    # query database 
 
 #******************************************Data*********************************************
@@ -24,11 +25,14 @@ pupEmerged$dead <- 1
 
 pupEmerged$name <- as.factor(pupEmerged$name)
 
+levels(pupEmerged$name) <- c("Control","Mating delay","Nutritional stress")
+
 
 tiff("fig_offspringSurvHist.tiff", height = 3, width = 6, units = 'in', compression="lzw", res=400)
 ggplot(pupEmerged) +
   geom_histogram(aes(daysSurv)) +
   labs(  x="Days surviving"
+         ,y="Number of flies"
   ) +
   theme_set(theme_bw()) +
   theme(axis.line = element_line(color = 'black')
@@ -48,35 +52,64 @@ dev.off()
 
 weights <- quantile(pupEmerged$wet_weight)
 
+
+tiff("fig_offspringWeightSex.tiff", height = 5, width = 4, units = 'in', compression="lzw", res=400)
+ggplot(pupEmerged) +
+  geom_boxplot(aes(y=wet_weight,x=sex)) +
+  ylab("Wet weight") +
+  xlab("Sex") +
+  theme_set(theme_bw()) +
+  theme(axis.line = element_line(color = 'black')
+        ,text=element_text(size=10)
+        ,plot.margin=unit(c(0.2,0.1,0.1,0.1), "cm")
+        ,axis.text=element_text(size=8)
+        ,legend.key.size = unit(0.8,"line")
+        ,legend.background = element_blank()
+        ,legend.text=element_text(size=9)
+        ,legend.position =c(0.2,0.9)
+        ,legend.title = element_blank()
+        ,strip.background = element_rect(colour="white", fill="white")
+        ,panel.border = element_blank()
+  ) +
+  facet_wrap(~name) 
+dev.off()
+
+
 #*****************************************control*********************************************
-ctrl <- pupEmerged[pupEmerged$name %in% "control",]
+ctrl <- pupEmerged[pupEmerged$name %in% "Control",]
 #*******************random effects***********
-y1 <- lme(as.numeric(daysSurv) ~ wet_weight + mAgeDays + I(mAgeDays^2), random = ~ 1 + mAgeDays + I(mAgeDays^2)| adults_id,data=ctrl,method="ML")
-y2 <- lme(as.numeric(daysSurv) ~ wet_weight + mAgeDays + I(mAgeDays^2), random = ~ 1 | adults_id,data=ctrl,method="ML")
-y3 <- lm(as.numeric(daysSurv) ~ wet_weight + mAgeDays + I(mAgeDays^2), data=ctrl)
+y1 <- lme(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays + I(mAgeDays^2), random = ~ 1 + mAgeDays + I(mAgeDays^2)| adults_id,data=ctrl,method="ML")
+y2 <- lme(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays + I(mAgeDays^2), random = ~ 1 | adults_id,data=ctrl,method="ML")
+y3 <- lm(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays + I(mAgeDays^2), data=ctrl)
 AICc(y1) 
 AICc(y2)
 AICc(y3)
-aictab(list(y1,y2))
+aictab(list(y2))
 aictab(list(y3))
-Weights(c(AICc(y1),c(AICc(y2),AICc(y3))))
+Weights(c(AICc(y2),AICc(y3)))
 #****************fixed effects***************
-y4 <- lm(as.numeric(daysSurv) ~ wet_weight + mAgeDays, data=ctrl)
-y5 <- lm(as.numeric(daysSurv) ~ wet_weight, data=ctrl)
-y6 <- lm(as.numeric(daysSurv) ~ 1,data=ctrl)
+y4 <- lm(as.numeric(daysSurv) ~ wet_weight + mAgeDays + I(mAgeDays^2), data=ctrl)
+y5 <- lm(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays, data=ctrl)
+y6 <- lm(as.numeric(daysSurv) ~ wet_weight + mAgeDays, data=ctrl)
+y7 <- lm(as.numeric(daysSurv) ~ wet_weight + sex, data=ctrl)
+y8 <- lm(as.numeric(daysSurv) ~ wet_weight, data=ctrl)
+y9 <- lm(as.numeric(daysSurv) ~ 1,data=ctrl)
 AICc(y3) 
 AICc(y4)
 AICc(y5) 
-AICc(y6) 
-aictab(list(y3,y4,y5,y6))
-Weights(c(AICc(y3),AICc(y4),AICc(y5),AICc(y6)))
+AICc(y6)
+AICc(y7)
+AICc(y8)
+AICc(y9)
+aictab(list(y3,y4,y5,y6,y7,y8,y9))
+Weights(c(AICc(y3),AICc(y4),AICc(y5),AICc(y6),AICc(y7),AICc(y8),AICc(y9)))
 #***********************************************
 summary(y3)
 #car::vif(y4)
 
 #*****************Predict effect of age*******************
 predFuncC <- function(weightDat=as.numeric(weights[1])) {
-  ctrlAgedat <- cbind.data.frame(wet_weight=rep(weightDat,100),mAgeDays=c(1:100))
+  ctrlAgedat <- cbind.data.frame(wet_weight=rep(rep(weightDat,100),2),mAgeDays=rep(c(1:100),2),sex=c(rep("m",100),rep("f",100)))
   ctrlPred <- data.frame(predict(y3
                        ,newdata=ctrlAgedat
                        ,interval="confidence"))
@@ -100,33 +133,40 @@ ctrlAge <- rbind.data.frame(ctrlAge1,ctrlAge2,ctrlAge3,ctrlAge4)
 
 
 #****************************************mating delay*************************************
-mate <- pupEmerged[pupEmerged$name %in% "mate_delay",]
+mate <- pupEmerged[pupEmerged$name %in% "Mating delay",]
 #*******************random effects**************
-y1 <- lme(as.numeric(daysSurv) ~ wet_weight + mAgeDays + I(mAgeDays^2), random = ~ 1 + mAgeDays + I(mAgeDays^2)| adults_id,data=mate,method="ML")
-y2 <- lme(as.numeric(daysSurv) ~ wet_weight + mAgeDays + I(mAgeDays^2), random = ~ 1 | adults_id,data=mate,method="ML")
-y3 <- lm(as.numeric(daysSurv) ~ wet_weight + mAgeDays + I(mAgeDays^2), data=mate)
+y1 <- lme(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays + I(mAgeDays^2), random = ~ 1 + mAgeDays + I(mAgeDays^2)| adults_id,data=mate,method="ML")
+y2 <- lme(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays + I(mAgeDays^2), random = ~ 1 | adults_id,data=mate,method="ML")
+y3 <- lm(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays + I(mAgeDays^2), data=mate)
 AICc(y2) 
 AICc(y3)
 aictab(list(y2))
 aictab(list(y3))
 Weights(c(AICc(y2),AICc(y3)))
 #*******************fixed effects******************
-y4 <- lm(as.numeric(daysSurv) ~ wet_weight + mAgeDays , data=mate)
-y5 <- lm(as.numeric(daysSurv) ~ wet_weight, data=mate)
-y6 <- lm(as.numeric(daysSurv) ~ 1,data=mate)
+y4 <- lm(as.numeric(daysSurv) ~ wet_weight + mAgeDays + I(mAgeDays^2), data=mate)
+y5 <- lm(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays, data=mate)
+y6 <- lm(as.numeric(daysSurv) ~ wet_weight + sex ,data=mate)
+y7 <- lm(as.numeric(daysSurv) ~ wet_weight + mAgeDays,data=mate)
+y8 <- lm(as.numeric(daysSurv) ~ wet_weight,data=mate)
+y9 <- lm(as.numeric(daysSurv) ~ 1,data=mate)
 AICc(y3) 
 AICc(y4) 
 AICc(y5) 
 AICc(y6) 
-aictab(list(y3,y4,y5,y6))
-Weights(c(AICc(y3),AICc(y4),AICc(y5),AICc(y6)))
+AICc(y7)
+AICc(y8)
+AICc(y9)
+
+aictab(list(y3,y4,y5,y6,y7,y8,y9))
+Weights(c(AICc(y3),AICc(y4),AICc(y5),AICc(y6),AICc(y7),AICc(y8),AICc(y9)))
 summary(y3)
 
 #************************predict************************
 #***************age**************
 
 predFuncM <- function(weightDat=as.numeric(weights[1])) {
-  mateAgedat <- cbind.data.frame(wet_weight=rep(weightDat,100),mAgeDays=c(1:100))
+  mateAgedat <- cbind.data.frame(wet_weight=rep(rep(weightDat,100),2),mAgeDays=rep(c(1:100),2),sex=c(rep("m",100),rep("f",100)))
   matePred <- data.frame(predict(y3
                                  ,newdata=mateAgedat
                                  ,interval="confidence"))
@@ -148,11 +188,11 @@ mateAge4$q <- "Quartile 4"
 mateAge <- rbind.data.frame(mateAge1,mateAge2,mateAge3,mateAge4)
 
 #***********************************nutritional stress***************************
-nuts <- pupEmerged[pupEmerged$name %in% "nutrition",]
+nuts <- pupEmerged[pupEmerged$name %in% "Nutritional stress",]
 #*********************random effects***********************
-y1 <- lmer(as.numeric(daysSurv) ~ wet_weight + mAgeDays + I(mAgeDays^2) + (1 + mAgeDays + I(mAgeDays^2)| adults_id),data=nuts,REML=F)
-y2 <- lmer(as.numeric(daysSurv) ~ wet_weight + mAgeDays + I(mAgeDays^2) + (1 | adults_id),data=nuts,REML=F)
-y3 <- lm(as.numeric(daysSurv) ~ wet_weight + mAgeDays + I(mAgeDays^2) , data=nuts)
+y1 <- lmer(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays + I(mAgeDays^2) + (1 + mAgeDays + I(mAgeDays^2)| adults_id),data=nuts,REML=F)
+y2 <- lmer(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays + I(mAgeDays^2) + (1 | adults_id),data=nuts,REML=F)
+y3 <- lm(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays + I(mAgeDays^2) , data=nuts)
 AICc(y2) 
 AICc(y3) 
 aictab(list(y2))
@@ -161,15 +201,15 @@ aictab(list(y3))
 summary(y2)
 Weights(c(AICc(y2),AICc(y3)))
 #********************fixed effects****************
-y4 <- lmer(as.numeric(daysSurv) ~ wet_weight+mAgeDays + ( 1 | adults_id),data=nuts,REML=F)
-y5 <- lmer(as.numeric(daysSurv) ~ wet_weight + ( 1 | adults_id),data=nuts,REML=F)
-y6 <- lmer(as.numeric(daysSurv) ~ 1 + ( 1 | adults_id),data=nuts,REML=F)
+y4 <- lmer(as.numeric(daysSurv) ~ wet_weight  + mAgeDays + I(mAgeDays^2) + ( 1 | adults_id),data=nuts,REML=F)
+y5 <- lmer(as.numeric(daysSurv) ~ wet_weight + sex + mAgeDays + ( 1 | adults_id),data=nuts,REML=F)
+y6 <- lmer(as.numeric(daysSurv) ~ wet_weight + sex + ( 1 | adults_id),data=nuts,REML=F)
+y7 <- lmer(as.numeric(daysSurv) ~ wet_weight + mAgeDays + ( 1 | adults_id),data=nuts,REML=F)
+y8 <- lmer(as.numeric(daysSurv) ~ wet_weight + ( 1 | adults_id),data=nuts,REML=F)
+y9 <- lmer(as.numeric(daysSurv) ~ 1 + ( 1 | adults_id),data=nuts,REML=F)
+aictab(list(y2,y4,y5,y6,y7,y8,y9))
 
-aictab(list(y2,y4,y5,y6))
-
-Weights(c(AICc(y2),AICc(y4),AICc(y5),AICc(y6)))
-
-y4a <- lme(as.numeric(daysSurv) ~ wet_weight+mAgeDays, random = ~ 1 | adults_id,data=nuts,method="ML")
+Weights(c(AICc(y2),AICc(y4),AICc(y5),AICc(y6),AICc(y7),AICc(y8),AICc(y9)))
 
 summary(y2)
 
@@ -178,7 +218,7 @@ summary(y2)
 #***age****
 
 predFuncN <- function(weightDat=as.numeric(weights[1])) {
-  nutsAgedat <- cbind.data.frame(wet_weight=rep(weightDat,100),mAgeDays=c(1:100),adults_id=rep(113,100))
+  nutsAgedat <- cbind.data.frame(wet_weight=rep(rep(weightDat,100),2),mAgeDays=rep(c(1:100),2),sex=c(rep("m",100),rep("f",100)),adults_id=rep(rep(113,100),2))
   nutsPred <- data.frame(predict(y2
                                  ,newdata=nutsAgedat))
   nutsAgedat$pred <- nutsPred[,1]
@@ -205,11 +245,12 @@ ctrlAge$name <- "Control"
 mateAge$name <- "Mating delay"
 nutsAge$name <- "Nutrtional stress"
 
-nutsAge <- nutsAge[,-3]
+nutsAge <- nutsAge[,-4]
 
 ageEffect <- rbind.data.frame(ctrlAge,mateAge,nutsAge)
 ageEffect$name <- as.factor(ageEffect$name)
 levels(ageEffect$name) <- c("Control","Mating delay","Nutritional stress")
+levels(ageEffect$sex) <- c("Female","Male")
 
 cols <- c("#cccccc"
           ,"#969696"
@@ -222,8 +263,7 @@ survAge.plot <- ggplot(ageEffect) +
   scale_linetype_manual("", values=c(1,2,3,4)) +
   scale_color_manual("",values=cols) +
   ylab("Predicted days surviving") +
-  xlab("Mother age") +
-  labs(title="b)") +
+  xlab("Mother age (days)") +
   theme_set(theme_bw()) +
   theme(axis.line = element_line(color = 'black')
         ,text=element_text(size=10)
@@ -231,19 +271,46 @@ survAge.plot <- ggplot(ageEffect) +
         ,axis.text=element_text(size=8)
         ,legend.key.size = unit(0.5,"line")
         ,legend.background = element_blank()
-        ,legend.text=element_text(size=8)
-        ,legend.position ="none"
+        ,legend.text=element_text(size=6)
+        ,legend.position =c(0.9,0.05)
         ,legend.title = element_blank()
         ,strip.background = element_rect(colour="white", fill="white")
         ,panel.border = element_blank()
         #,strip.text.x = element_blank()
   ) +
-  facet_wrap(~name)
+  facet_wrap(~name+sex,ncol=2,labeller = label_wrap_gen(multi_line=FALSE))
 
 
-tiff("Fig5_offspringEmSurv.tiff", height = 6, width = 6, units = 'in', compression="lzw", res=400)
-grid.arrange(agePlot,survAge.plot ,nrow=2,ncol=2,widths=c(2,1)
-             ,layout_matrix = rbind(c(1, NA),
-                                   c(2,2)))
+survAge.plot
+
+tiff("Fig5_offspringSurv.tiff", height = 6, width = 4.5, units = 'in', compression="lzw", res=400)
+survAge.plot
+dev.off()
+
+pupEmerged$sex <- as.factor(pupEmerged$sex)
+levels(pupEmerged$sex) <- c("Female","Male")
+
+tiff("FigRawSurv.tiff", height = 5, width = 6, units = 'in', compression="lzw", res=400)
+ggplot(pupEmerged) +
+  geom_point(aes(x=mAgeDays,y=daysSurv,col=wet_weight)
+             ,size=0.5) +
+  ylab("Offspring survival (days)") +
+  xlab("Mother age (days)") +
+  scale_color_continuous(low="#D3D3D3",high="black") +
+  labs(colour="Wet weight") +
+  theme_set(theme_bw()) +
+  theme(axis.line = element_line(color = 'black')
+        ,text=element_text(size=8)
+        ,plot.margin=unit(c(0.2,0.1,0.1,0.1), "cm")
+        ,axis.text=element_text(size=6)
+        ,legend.key.size = unit(0.8,"line")
+        ,legend.background = element_blank()
+        ,legend.text=element_text(size=7)
+      #  ,legend.position =c(0.95,0.5)
+       # ,legend.title = element_blank()
+        ,strip.background = element_rect(colour="white", fill="white")
+        ,panel.border = element_blank()
+  ) +
+  facet_wrap(~name+sex,labeller = label_wrap_gen(multi_line=FALSE))
 dev.off()
 

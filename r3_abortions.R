@@ -194,3 +194,28 @@ ggplot(mother.larvipositions,aes(as.numeric(mAge),abortion)) +
 dev.off()
 
 
+tiff("FigRawAbortions.tiff", height = 3, width = 6, units = 'in', compression="lzw", res=400)
+ggplot(mother.larvipositions) +
+  geom_jitter(aes(x=mAge,y=abortion)
+              ,position = position_jitter(height = .02)
+              ,alpha=0.4
+              ,size=0.5) +
+  ylab("Abortion") +
+  xlab("Mother age (days)") +
+  scale_y_continuous(breaks=c(0,1),labels=c("0","1")) +
+  theme_set(theme_bw()) +
+  theme(axis.line = element_line(color = 'black')
+        ,text=element_text(size=9)
+        ,plot.margin=unit(c(0.2,0.1,0.1,0.1), "cm")
+        ,axis.text=element_text(size=7)
+        ,legend.key.size = unit(0.8,"line")
+        ,legend.background = element_blank()
+        ,legend.text=element_text(size=8)
+        ,legend.position =c(0.2,0.9)
+        ,legend.title = element_blank()
+        ,strip.background = element_rect(colour="white", fill="white")
+        ,panel.border = element_blank()
+  ) +
+  facet_wrap(~name)
+dev.off()
+

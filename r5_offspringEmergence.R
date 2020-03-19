@@ -104,21 +104,22 @@ Weights(c(AICc(nuts1),AICc(nuts2),AICc(nuts3),AICc(nuts4)))
 summary(nuts2)
 car::vif(nuts2)
 
-#***********************************Predict*******************************
+#************predict***********
 weights <- quantile(nuts$wet_weight)
 
 ilink <- family(nuts2)$linkinv
 
-predictFunc <- function(weightDat=as.numeric(weights[1])) {
-ageP <- with(nuts,
-                data.frame(mAgeDays = seq(min(mAgeDays), max(mAgeDays),
-                                            length = 100)
-                           ,wet_weight=rep(weightDat,100)))
-ageP <- cbind(ageP, predict(nuts2, ageP, type = "link", se.fit = TRUE)[1:2])
-ageP <- transform(ageP, Fitted = ilink(fit), Upper = ilink(fit + (1.96 * se.fit)),
-                     Lower = ilink(fit - (1.96 * se.fit)))
 
-return(ageP)
+predictFunc <- function(weightDat=as.numeric(weights[1])) {
+  ageP <- with(nuts,
+               data.frame(mAgeDays = seq(min(mAgeDays), max(mAgeDays),
+                                         length = 100)
+                          ,wet_weight=rep(weightDat,100)))
+  ageP <- cbind(ageP, predict(nuts2, ageP, type = "link", se.fit = TRUE)[1:2])
+  ageP <- transform(ageP, Fitted = ilink(fit), Upper = ilink(fit + (1.96 * se.fit)),
+                    Lower = ilink(fit - (1.96 * se.fit)))
+  
+  return(ageP)
 }
 
 ageP1 <- predictFunc(as.numeric(weights[1]))
@@ -132,17 +133,18 @@ ageP4$q <- "Quartile 4"
 
 ageP <- rbind.data.frame(ageP1,ageP2,ageP3,ageP4)
 
+
 cols <- c("#cccccc"
-  ,"#969696"
-  ,"#636363"
-  ,"#252525")
+          ,"#969696"
+          ,"#636363"
+          ,"#252525")
 
 agePlot <- ggplot(ageP) +
   geom_line(aes(x=mAgeDays,y=Fitted,col=q,linetype=q)) +
   ylim(0.2,1) +
   ylab("Predicted probability of emergence") +
   xlab("Mother age (days)") +
-  labs (title="a)") +
+  #labs(col="Wet weight quartile") +
   scale_linetype_manual("", values=c(1,2,3,4)) +
   scale_color_manual("",values=cols) +
   theme_set(theme_bw()) +
@@ -153,7 +155,12 @@ agePlot <- ggplot(ageP) +
         ,legend.key.size = unit(0.8,"line")
         ,legend.background = element_blank()
         ,legend.text=element_text(size=9)
-       # ,legend.position =c(0.1,0.2)
+        ,legend.position =c(0.1,0.2)
         ,strip.background = element_rect(colour="white", fill="white")
         ,panel.border = element_blank()
   )
+
+
+tiff("fig_nutEmergence.tiff", height = 3, width = 6, units = 'in', compression="lzw", res=400)
+agePlot
+dev.off()
