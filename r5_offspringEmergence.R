@@ -32,77 +32,292 @@ pupae <- pupae[!pupae$wet_weight %in% NA,]
 emergedByTreat <- ddply(pupae,.(name),summarise,em=sum(emerged),totem=length(emerged))
 #***********************************************************************************************
 
+ctrl <- pupae[pupae$name %in% "control",]
+mate <- pupae[pupae$name %in% "mate_delay",]
+nuts <- pupae[pupae$name %in% "nutrition",]
+
+sum(1-ctrl$emerged) #15
+sum(1-mate$emerged) #14
+sum(1-nuts$emerged) #20
 
 
 #********************************************Analysis***************************************
 
-# ****************************Control group*****************************
-ctrl <- pupae[pupae$name %in% "control",]
-#********random effects********
-rand1 <- glm(emerged ~ 1,data=ctrl,family=binomial)
-rand2 <- glm(emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) , data=ctrl,family=binomial)
-rand3 <- glmer(emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + (1|adults_id), data=ctrl,family=binomial)
-rand4 <- glmer(emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + (1 + mAgeDays + I(mAgeDays^2)|adults_id ))
+fitModFunc <- function(form,modType,dat,whichAIC){
+  #glmeCtrl <- glmerControl(optimizer='optim')
+  
+  mod <- tryCatch( 
+  
+  if(modType=="me"){
+    glmer(form
+                 ,family=binomial
+                 ,data=dat)
+  }else{
+    glm(form
+               ,family=binomial
+               ,data=dat)
+  }
+  ,
+  warning = function(w) {
+    message("Here's the original error message:")
+    message(w)
+    return(NA)
+  },
+  
+  error = function(cond) {
+    message("Here's the original error message:")
+    message(cond)
+    return(NA)
+  },
+  
+  finally = {
+    message(paste("Processed"))
+  }
+  
+  )
+  
+  sing<-F
+  
+  if(is.na(mod)==F){
+    
+    if(modType=="me"){
+       if(isSingular(mod)==T){sing<-T}
+    }
+      
+      if(sing == F){
+        out <- summary(mod)
 
-summary(rand2)
-###********fixed effects**********
-ctrl1 <- glm(emerged ~ wet_weight + mAgeDays + I(mAgeDays^2),data=ctrl,family=binomial)
-ctrl2 <- glm(emerged ~ wet_weight + mAgeDays,data=ctrl,family=binomial)
-ctrl3  <- glm(emerged ~ wet_weight, data=ctrl,family=binomial)
-ctrl4 <- glm(emerged ~ 1, data=ctrl,family=binomial)
-AICc(ctrl1) 
-AICc(ctrl2) 
-AICc(ctrl3)
-AICc(ctrl4) 
-aictab(list(ctrl1,ctrl2,ctrl3,ctrl4))
-Weights(c(AICc(ctrl1),AICc(ctrl2),AICc(ctrl3),AICc(ctrl4)))
-#**************************************************
+        coefs <- coefficients(out)
+        
+     #   coefsci <-   confint(mod)
+       
+        ll <- logLik(mod)
+         parms <- attributes(ll)$df 
+  
+       if (whichAIC =="aic"){
+         aic <- AIC(mod)
+       }else{aic <- AICc(mod)}
+  
+       # return(list(coefs,coefsci,parms,ll,aic))
+         return(list(coefs,parms,ll,aic))
+         
+    }else{
+        return(list(-999,-999,-999,-999,-999))
+    }
+  }else{return(list(NA,NA,NA,NA,NA))}
+  
+  }
+  
+modelSummaryFunc <- function(modelFitOutputs,form){
+  
+  model <-form
+  
+  k <- modelFitOutputs[[3]]
+  ll <- as.numeric(modelFitOutputs[[4]])
+  aic <- modelFitOutputs[[5]]
+  
+  modelSummary <- c(model,k,ll,aic)
+  return(modelSummary)
+  
+}
 
-#**********mating delay group**********
-mate <- pupae[pupae$name %in% "mate_delay",]
-rand1 <- glm(emerged ~ 1,data=mate,family=binomial)
-rand2 <- glm(emerged ~ wet_weight + mAgeDays + I(mAgeDays^2), data=mate,family=binomial)
-rand3 <- glmer(emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + (1|adults_id), data=mate,family=binomial)
-rand4 <- glmer(emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + (1 + mAgeDays + I(mAgeDays^2)|adults_id ),data=mate,family=binomial)
-
-###fixed effects
-mate1 <- glm(emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) ,data=mate,family=binomial)
-mate2 <- glm(emerged ~ wet_weight + mAgeDays ,data=mate,family=binomial)
-mate3  <- glm(emerged ~ wet_weight , data=mate,family=binomial)
-mate4 <- glm(emerged ~ 1, data=mate,family=binomial)
-AICc(mate1)
-AICc(mate2)
-AICc(mate3) 
-AICc(mate4) 
-aictab(list(mate1,mate2,mate3,mate4))
-Weights(c(AICc(mate1),AICc(mate2),AICc(mate3),AICc(mate4)))
-
-#************************************************
 
 
-# ********************************Nutritional stress group*********************** 
-#******random effects*******
+
+m1 <- emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + I(mAgeDays^3) + (1 + wet_weight  |adults_id ) # incl. additional random effects likely unidentifiable
+m2 <- emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + I(mAgeDays^3) + (1 |adults_id )
+m3 <- emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + I(mAgeDays^3) 
+
+m4 <- emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + (1 + wet_weight |adults_id )
+m5 <- emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + (1 |adults_id )
+m6 <- emerged ~ wet_weight + mAgeDays + I(mAgeDays^2)
+
+m7 <- emerged ~ wet_weight + log(mAgeDays) + (1 + wet_weight |adults_id )
+m8 <- emerged ~ wet_weight + log(mAgeDays) + (1 |adults_id )
+m9 <- emerged ~ wet_weight + log(mAgeDays) 
+
+m10 <- emerged ~ wet_weight + mAgeDays + (1 + wet_weight |adults_id )
+m11 <- emerged ~ wet_weight + mAgeDays + (1 |adults_id )
+m12 <- emerged ~ wet_weight + mAgeDays 
+
+m13 <- emerged ~ wet_weight + (1 + wet_weight |adults_id )
+m14 <- emerged ~ wet_weight + (1 |adults_id )
+m15 <- emerged ~ wet_weight 
+m16 <- emerged ~ 1
+
+mT <- c("me","me","fe","me","me","fe","me","me","fe","me","me","fe","me","me","fe","fe")
+  
+
+combinations <- c(m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11,m12,m13,m14,m15,m16)
+#************************Control treatment*************************
+fitModsC <- lapply(1:length(combinations),function(x){
+  form <- formula(as.character(combinations[x]))
+  modelFit <- fitModFunc(form=form,modType=mT[x],dat=ctrl,whichAIC="aicc")
+  return(modelFit)
+})
+
+
+modSum <- lapply(1:length(combinations),function(x){
+  f <- combinations[x]
+  modO <- fitModsC[[x]]
+  modSum <- modelSummaryFunc(modO,f)
+  return(modSum)
+})
+
+model <- as.character(sapply(modSum,'[[',1))
+k <- sapply(modSum,'[[',2)
+ll <- sapply(modSum,'[[',3)
+aic <- sapply(modSum,'[[',4)
+
+modelSummary <- cbind.data.frame(model,k,ll,aic)
+modelSummary$k[modelSummary$k %in% -999] <- NA
+modelSummary$ll[modelSummary$ll %in% -999] <- NA
+modelSummary$comment <- NA
+modelSummary$comment[modelSummary$aic %in% -999] <- "Singular fit"
+modelSummary$comment[modelSummary$aic %in% NA] <- "Convergence failure"
+modelSummary$aic[modelSummary$aic %in% -999] <- NA 
+
+modelSummary <- modelSummary[order(modelSummary$aic),]
+
+modelSummary$deltaAIC <- round(modelSummary$aic - min(modelSummary$aic,na.rm=T),3)
+modelSummary$weights[is.na(modelSummary$aic)==F] <- round(Weights(modelSummary$aic[is.na(modelSummary$aic)==F]),3)
+saveRDS(modelSummary, file = "modelSummaryEmergenceControl.rds")
+
+#***********************Mating delay***********************
+fitModsM <- lapply(1:length(combinations),function(x){
+  form <- formula(as.character(combinations[x]))
+  modelFit <- fitModFunc(form=form,modType=mT[x],dat=mate,whichAIC="aicc")
+  return(modelFit)
+})
+
+
+modSum <- lapply(1:length(combinations),function(x){
+  f <- combinations[x]
+  modO <- fitModsM[[x]]
+  modSum <- modelSummaryFunc(modO,f)
+  return(modSum)
+})
+
+model <- as.character(sapply(modSum,'[[',1))
+k <- sapply(modSum,'[[',2)
+ll <- sapply(modSum,'[[',3)
+aic <- sapply(modSum,'[[',4)
+
+modelSummary <- cbind.data.frame(model,k,ll,aic)
+modelSummary$k[modelSummary$k %in% -999] <- NA
+modelSummary$ll[modelSummary$ll %in% -999] <- NA
+modelSummary$comment <- NA
+modelSummary$comment[modelSummary$aic %in% -999] <- "Singular fit"
+modelSummary$comment[modelSummary$aic %in% NA] <- "Convergence failure"
+modelSummary$aic[modelSummary$aic %in% -999] <- NA 
+
+modelSummary <- modelSummary[order(modelSummary$aic),]
+
+modelSummary$deltaAIC <- round(modelSummary$aic - min(modelSummary$aic,na.rm=T),3)
+modelSummary$weights[is.na(modelSummary$aic)==F] <- round(Weights(modelSummary$aic[is.na(modelSummary$aic)==F]),3)
+saveRDS(modelSummary, file = "modelSummaryEmergenceMate.rds")
+
+
+
+#**********************Nutritional stress***********************
 nuts <- pupae[pupae$name %in% "nutrition",]
-rand1 <- glm(emerged ~ 1,data=nuts,family=binomial)
-rand2 <- glm(emerged ~ wet_weight+mAgeDays + I(mAgeDays^2) , data=nuts,family=binomial)
-rand3 <- glmer(emerged ~ wet_weight+mAgeDays + I(mAgeDays^2)  + (1|adults_id), data=nuts,family=binomial)
-rand4 <- glmer(emerged ~ wet_weight+mAgeDays + I(mAgeDays^2)  + (1+mAgeDays + I(mAgeDays^2)|adults_id), data=nuts,family=binomial)
-# convergence failure/ singular fit
+nuts$notEmerged <- 1-nuts$emerged
 
-#*******fixed effects*******
-nuts1  <- glm(emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) , data=nuts,family=binomial)
-nuts2 <- glm(emerged ~ wet_weight + mAgeDays,data=nuts,family=binomial)
-nuts3 <- glm(emerged ~ wet_weight ,data=nuts,family=binomial)
-nuts4 <- glm(emerged ~ 1 , data=nuts,family=binomial)
-AICc(nuts1) 
-AICc(nuts2) 
-AICc(nuts3) 
-AICc(nuts4) 
-aictab(list(nuts1,nuts2,nuts3,nuts4))
-Weights(c(AICc(nuts1),AICc(nuts2),AICc(nuts3),AICc(nuts4)))
+# incl. additional random effects likely unidentifiable
 
-summary(nuts2)
+
+nuts$mAgeDays <- scale(nuts$mAgeDays)
+nuts$wet_weight <- scale(nuts$wet_weight)
+
+fitModsN <- lapply(1:length(combinations),function(x){
+  form <- formula(as.character(combinations[x]))
+  modelFit <- fitModFunc(form=form,modType=mT[x],dat=nuts,whichAIC="aicc")
+  return(modelFit)
+})
+
+
+library("brglm2")
+library("blme")
+
+test <- glmer(m1,family="binomial",data=nuts) # problem is complete separation
+# many of the individual adults had all their offspring emerge
+
+summary(test2 <- glm(emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + I(mAgeDays^3),data=nuts,family="binomial"))
+
+
+test <- glmer(notEmerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + I(mAgeDays^3) + (1 + wet_weight  |adults_id ) 
+    , data =nuts, family = binomial, method="detect_separation")
+
+
+
+cmod_blme_L2 <- bglmer(m1,family="binomial",data=nuts,
+                       fixef.prior = normal(cov = diag(9,4)))
+
+
+
+
+
+modSum <- lapply(1:length(combinations),function(x){
+  f <- combinations[x]
+  modO <- fitModsN[[x]]
+  modSum <- modelSummaryFunc(modO,f)
+  return(modSum)
+})
+
+model <- as.character(sapply(modSum,'[[',1))
+k <- sapply(modSum,'[[',2)
+ll <- sapply(modSum,'[[',3)
+aic <- sapply(modSum,'[[',4)
+
+modelSummary <- cbind.data.frame(model,k,ll,aic)
+modelSummary$k[modelSummary$k %in% -999] <- NA
+modelSummary$ll[modelSummary$ll %in% -999] <- NA
+modelSummary$comment <- NA
+modelSummary$comment[modelSummary$aic %in% -999] <- "Singular fit"
+modelSummary$comment[modelSummary$aic %in% NA] <- "Convergence failure"
+modelSummary$aic[modelSummary$aic %in% -999] <- NA 
+
+modelSummary <- modelSummary[order(modelSummary$aic),]
+
+modelSummary$deltaAIC <- round(modelSummary$aic - min(modelSummary$aic,na.rm=T),3)
+modelSummary$weights[is.na(modelSummary$aic)==F] <- round(Weights(modelSummary$aic[is.na(modelSummary$aic)==F]),3)
+saveRDS(modelSummary, file = "modelSummaryEmergenceNuts.rds")
+
+
+
+mod <- tryCatch( 
+  
+  glmer(emerged ~ wet_weight + mAgeDays + I(mAgeDays^2) + (1 | adults_id)
+        ,data=nuts
+        ,family="binomial")
+  
+  ,
+  warning = function(w) {
+    message("Here's the original error message:")
+    message(w)
+    return(NA)
+  },
+  
+  error = function(cond) {
+    message("Here's the original error message:")
+    message(cond)
+    return(NA)
+  },
+  
+  finally = {
+    message(paste("Processed"))
+  }
+  
+)
+
+
+
 car::vif(nuts2)
+
+
+
+
+
 
 #************predict***********
 weights <- quantile(nuts$wet_weight)

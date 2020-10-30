@@ -33,6 +33,39 @@ ddply(numWeighed,.(name),summarise,range(num))
 
 pupWeight <- pupWeight[!pupWeight$wet_weight%in%NA,]     # remove those - 31 of 1239 for which no wet weight data - either lost or crushed
 
+#**********************wet weight vs fat************
+
+pupWeight$fat <- pupWeight$dry_weight - pupWeight$residual_dry_weight
+fat <- pupWeight[pupWeight$fat > 1,]
+fat <- fat[!fat$fat %in% NA,]
+
+corr <- lm(fat ~ wet_weight, data=fat)
+summary(corr)
+
+
+#tiff("FigWeightFat.tiff", height = 5, width = 5, units = 'in', compression="lzw", res=400)
+ggplot(fat) +
+  geom_point(aes(x=wet_weight,y=fat,col=name),size=0.8) +
+  labs(x="Wet weight (mg)"
+       ,y="Fat (mg)"
+       ,col="Treatment") +
+  scale_color_manual(values=c("#875777","#eab051","#c0b9ac")) +
+  theme_set(theme_bw()) +
+  theme(axis.line = element_line(color = 'black')
+        ,text=element_text(size=10)
+        ,plot.margin=unit(c(0.2,0.1,0.1,0.1), "cm")
+        ,axis.text=element_text(size=8)
+        ,legend.key.size = unit(0.5,"line")
+        ,legend.background = element_blank()
+        ,legend.text=element_text(size=7)
+        ,legend.position =c(0.9,0.2)
+        ,legend.title = element_text(size=7)
+        ,strip.background = element_rect(colour="white", fill="white")
+        ,panel.border = element_blank()
+        #,strip.text.x = element_blank()
+  )
+#dev.off()
+
 
 
 #***********calculate mean weight and confidence intervals for females per 10 days***********
@@ -60,157 +93,231 @@ nuts <- pupWeight[pupWeight$name %in% "Nutritional stress",]
 ctrl <- pupWeight[pupWeight$name %in% "Control",]
 mate <- pupWeight[pupWeight$name %in% "Mating delay",]
 
-
+# 
 mean(mate$wet_weight,na.rm=T) # 32.57
 mean(ctrl$wet_weight,na.rm=T) # 33.54
 mean(nuts$wet_weight,na.rm=T) # 28.02
 
 
+#*********************Fit model func*****************
+fitModRand <- function(fixedEffects,randomEffects,dat,whichAIC){
+  lmeCtrl <- lmeControl(opt='optim')
+ if(is.na(randomEffects)){
+   mod <- lm(fixedEffects,data=dat)
+   coefsci <- confint(mod)
+   coefs <- coefficients(mod)
+   coefs <- cbind.data.frame(lower=coefsci[,1],est.=coefs,upper=coefsci[,2])
+   rand <- c(NA,NA)
+ }else{
+  mod <- lme(fixedEffects
+            ,random = randomEffects
+            ,data=dat,method="ML",control=lmeCtrl)
+  coefs <- intervals(mod,which="fixed")
+  coefs <- data.frame(coefs$fixed)
+  names(coefs) <- c("lower","est.","upper")
+  rand <- VarCorr(mod)
+  rand <- data.frame(rand[1:length(rand[1,]),1:2])
+  }
+  out <- summary(mod)
+
+  ll <- logLik(mod)
+  parms <- attributes(ll)$df - 1
+
+  if (whichAIC =="aic"){
+    aic <- AIC(mod)
+  }else{aic <- AICc(mod)}#,nobs=length(dat$name))}
+
+  return(list(coefs,parms,ll,aic,rand))
+}
 
 
-#*******************Control treatment****************
-#************************RANDOM EFFECTS***************************
-rand3 <- lm(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3), data=ctrl)
-rand2 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3), random = ~1 | adults_id, data=ctrl,method="ML")
-rand1 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3), random = ~1+mAgeDays| adults_id, data=ctrl,method="ML")
 
-aictab(list(rand1,rand2))
-aictab(list(rand3))
+# formulas incl. random effects
+fe1 <- wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3)
+re1 <- ~1+mAgeDays+I(mAgeDays^2)+I(mAgeDays^3)| adults_id
+re1a <- ~1| adults_id
 
-AIC(rand1)
-AIC(rand2)
-AIC(rand3)
+fe2 <-  wet_weight ~ mAgeDays+I(mAgeDays^2)
+re2 <-  ~1+mAgeDays+I(mAgeDays^2)| adults_id
+re2a <- ~1| adults_id
 
-Weights(c(AIC(rand3),AIC(rand2),AIC(rand1)))
+fe3 <- wet_weight ~ log(mAgeDays)
+re3 <- ~1+log(mAgeDays)| adults_id
+re3a <- ~1| adults_id
 
-#************autocorrelation**************
-a1 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id, data=ctrl,method="ML")
-a2 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id, corr=corCompSymm(form =~mAgeDays),data=ctrl,method="ML")
-a3 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id, corr=corAR1(form=~mAgeDays),data=ctrl,method="ML")
-# #*******************************************
-aictab(list(a1,a2,a3))
-AIC(a1)
-AIC(a2)
-AIC(a3)
-Weights(c(AIC(a1),AIC(a2),AIC(a3)))
+fe4 <- wet_weight ~ mAgeDays
+re4 <- ~1+mAgeDays| adults_id
+re4a <- ~1| adults_id
 
-#*************************Fixed effects****************
-c1 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id,data=ctrl,method="ML")
-c2 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2) , random = ~1+mAgeDays| adults_id,data=ctrl,method="ML")
-c3 <- lme(wet_weight ~ mAgeDays , random = ~1+mAgeDays| adults_id,data=ctrl,method="ML")
-c4 <- lme(wet_weight ~ 1, random = ~1| adults_id,data=ctrl,method="ML")
-aictab(list(c1,c2,c3,c4))
-AIC(c1)
-AIC(c2)
-AIC(c3)
-AIC(c4)
-Weights(c(AIC(c1),AIC(c2),AIC(c3),AIC(c4)))
+fe5 <- wet_weight ~ 1
+re5 <- ~1| adults_id
 
-summary(c2)
-modCtrl <- c2
+combinations <- list(c(fe1,re1)
+                     ,c(fe1,re1a)
+                     ,c(fe1,NA)
+                     ,c(fe2,re2)
+                     ,c(fe2,re2a)
+                     ,c(fe2,NA)
+                     ,c(fe3,re3)
+                     ,c(fe3,re3a)
+                     ,c(fe3,NA)
+                     ,c(fe4,re4)
+                     ,c(fe4,re4a)
+                     ,c(fe4,NA)
+                     ,c(fe5,re5)
+                     ,c(fe5,NA))
 
-plot(ctrl$wet_weight,residuals(c2))
-plot(ctrl$mAgeDays
-     ,residuals(c2)
-     ,ylim=c(-20,20)
-)
+
+modelSummaryFunc <- function(modelFitOutputs,name= "modelSummaryWetWeightControl.rds"){
+  
+  fixedEffects <- as.character(sapply(modelFitOutputs,'[[',1))
+  randomEffects <- as.character(sapply(modelFitOutputs,'[[',2))
+  
+  outPuts <- lapply(modelFitOutputs,'[[',3)
+  k <- sapply(outPuts,'[[',2)
+  ll <- sapply(outPuts,'[[',3)
+  aic <- sapply(outPuts,'[[',4)
+  
+  modelSummary <- cbind.data.frame(fixedEffects,randomEffects,k,ll,aic)
+  modelSummary$modelNumber <- row.names(modelSummary)
+  modelSummary <- modelSummary[order(modelSummary$aic),]
+  modelSummary <- modelSummary[,c(6,1,2,3,4,5)]
+  
+  modelSummary$deltaAIC <- round(modelSummary$aic - min(modelSummary$aic),3)
+  modelSummary$weights <- round(Weights(modelSummary$aic),3)
+  row.names(modelSummary) <- c()
+  saveRDS(modelSummary, file = name)
+  return(modelSummary)
+  
+}
+
+coefSummaryFunc<- function(modelFitOutputs,name= "coefsWetWeightControl.rds",mods=modelsC){
+
+  outPuts <- lapply(modelFitOutputs,'[[',3)
+  aics <- as.numeric(lapply(outPuts,'[[',4))
+  cfs <- lapply(outPuts,'[[',1)
+  
+  cfs2 <- lapply(1:length(cfs),function(x){
+    temp <- cfs[[x]]
+    temp$modelNumber <- x
+    temp$parameter <- row.names(temp)
+    row.names(temp) <- c()
+    temp$aic <- aics[[x]]
+    return(temp[,c(4,5,1,2,3,6)])
+  })
+  
+  cfs3 <- do.call(rbind,cfs2)
+  cfs3 <- cfs3[order(cfs3$aic),]
+  cfs3 <- cfs3[,-6]
+  cfs3 <- cfs3[order(cfs3$parameter),]
+  modelsWeightZero <- mods$modelNumber[mods$weights == 0]
+  cfs3 <- cfs3[!cfs3$modelNumber %in% as.numeric(modelsWeightZero),]
+  row.names(cfs3) <- c()
+  saveRDS(cfs3, file = name)
+  
+  op <- lapply(modelFitOutputs,'[[',3)
+  randomEffects <- lapply(op,'[[',5)
+  re2 <- lapply(1:length(randomEffects),function(x){
+    temp <- randomEffects[[x]]
+    if(!is.na(temp)){
+    temp$modelNumber <- x
+    temp$parameter <- row.names(temp)
+    row.names(temp) <- c()
+    temp$aic <- aics[[x]]
+    return(temp[,c(3,4,1,2,5)])
+    }
+  })
+  
+  re3 <- do.call(rbind,re2)
+  re3 <- re3[order(re3$aic),]
+  re3 <- re3[,-5]
+  re3[,3] <- round(as.numeric(as.character(re3[,3])),3)
+  re3[,4] <- round(as.numeric(as.character(re3[,4])),3)
+  re3 <- re3[order(re3$parameter),]
+  re3 <- re3[!re3$modelNumber %in% as.numeric(modelsWeightZero),]
+  row.names(re3) <- c()
+  saveRDS(re3,file=paste("RE",name))
+  
+  return(cfs3)
+}
+#***********************************Control treatment***************************************
+
+
+fitModsC <- lapply(1:length(combinations),function(x){
+  temp <- combinations[[x]]
+  fe <- as.formula(as.character(temp[1]))
+  re <-  NA
+  if(!is.na(temp[2])){re <- as.formula(as.character(temp[2]))}
+  output <- fitModRand(fixedEffects=fe,randomEffects=re,dat=ctrl,whichAIC="aicc")
+  return(list(temp[1],temp[2],output))
+})
+
+modelsC <- modelSummaryFunc(fitModsC,name="modelSummaryWetWeightControl.rds")
+
+coefSummaryFunc(modelFitOutputs=fitModsC,name="coefsWetWeightControl.rds",mods=modelsC)
+
 
 #*******************Mating delay treatment****************
-#************************RANDOM EFFECTS***************************
-rand3 <- lm(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3), data=mate)
-rand2 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3), random = ~1 | adults_id, data=mate,method="ML")
-rand1 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3), random = ~1+mAgeDays| adults_id, data=mate,method="ML")
 
-aictab(list(rand1,rand2))
-aictab(list(rand3))
-Weights(c(AIC(rand3),AIC(rand2),AIC(rand1)))
+fitModsM <- lapply(1:length(combinations),function(x){
+  temp <- combinations[[x]]
+  fe <- as.formula(as.character(temp[1]))
+  re <- NA
+  if(!is.na(temp[2])){re <- as.formula(as.character(temp[2]))}
+  output <- fitModRand(fixedEffects=fe,randomEffects=re,dat=mate,whichAIC="aicc")
+  return(list(temp[1],temp[2],output))
+})
 
+modelsM <- modelSummaryFunc(fitModsM,name="modelSummaryWetWeightMate.rds")
 
-a1 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id, data=mate,method="ML")
-a2 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id, corr=corCompSymm(form =~mAgeDays),data=mate,method="ML")
-a3 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id, corr=corAR1(form=~mAgeDays),data=mate,method="ML")
-# #*******************************************
-aictab(list(a1,a2,a3))
-AICc(a1)
-AICc(a2)
-AICc(a3)
-
-Weights(c(AICc(a1),AICc(a2),AICc(a3)))
-
-
-c1 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id,data=mate,method="ML")
-c2 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2) , random = ~1+mAgeDays| adults_id, data=mate,method="ML")
-c3 <- lme(wet_weight ~ mAgeDays , random = ~1+mAgeDays| adults_id,data=mate,method="ML")
-c4 <- lme(wet_weight ~ 1, random = ~1| adults_id, data=mate,method="ML")
-aictab(list(c1,c2,c3,c4))
-length(mate[,1])/9
-AIC(c1)
-AIC(c2)
-AIC(c3)
-AIC(c4)
-Weights(c(AICc(c1),AICc(c2),AICc(c3),AICc(c4)))
-
-summary(c2)
-modMate <- c2
-
-plot(mate$mAgeDays
-     ,residuals(c2)
-     ,ylim=c(-20,20)
-     )
+coefSummaryFunc(modelFitOutputs=fitModsM,name="coefsWetWeightMate.rds",mods=modelsM)
 
 
 #*******************Nutritional stress treatment****************
-#************************RANDOM EFFECTS***************************
-rand3 <- lm(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3), data=nuts)
-rand2 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3), random = ~1 | adults_id, data=nuts,method="ML")
-rand1 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3), random = ~1+mAgeDays| adults_id, data=nuts,method="ML")
-
-aictab(list(rand1,rand2))
-aictab(list(rand3))
-Weights(c(AIC(rand3),AIC(rand2),AIC(rand1)))
 
 
+fitModsN <- lapply(1:length(combinations),function(x){
+  temp <- combinations[[x]]
+  fe <- as.formula(as.character(temp[1]))
+  re <- NA
+  if(!is.na(temp[2])){re <- as.formula(as.character(temp[2]))}
+  output <- fitModRand(fixedEffects=fe,randomEffects=re,dat=nuts,whichAIC="aicc")
+  return(list(temp[1],temp[2],output))})
 
-a1 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id, data=nuts,method="ML")
-a2 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id, corr=corCompSymm(form =~mAgeDays),data=nuts,method="ML")
-a3 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id, corr=corAR1(form=~mAgeDays),data=nuts,method="ML")
-# #*******************************************
-aictab(list(a1,a2,a3))
-AICc(a1)
-AICc(a2)
-AICc(a3)
+modelsN <- modelSummaryFunc(fitModsN,name="modelSummaryWetWeightNuts.rds")
 
-Weights(c(AICc(a1),AICc(a2),AICc(a3)))
+coefSummaryFunc(modelFitOutputs=fitModsN,name="coefsWetWeightNuts.rds",mods=modelsN)
 
+# without mothers that died - run code in motherDeaths
+deadNuts
+nuts <- nuts[!nuts$adults_id %in% deadNuts,]
+fitModsN <- lapply(1:length(combinations),function(x){
+  temp <- combinations[[x]]
+  fe <- as.formula(as.character(temp[1]))
+  re <- NA
+  if(!is.na(temp[2])){re <- as.formula(as.character(temp[2]))}
+  output <- fitModRand(fixedEffects=fe,randomEffects=re,dat=nuts,whichAIC="aicc")
+  return(list(temp[1],temp[2],output))})
 
-c1 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3) , random = ~1+mAgeDays| adults_id,data=nuts,method="ML")
-c2 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2) , random = ~1+mAgeDays| adults_id, data=nuts,method="ML")
-c3 <- lme(wet_weight ~ mAgeDays , random = ~1+mAgeDays| adults_id, data=nuts,method="ML")
-c4 <- lme(wet_weight ~ 1, random = ~1| adults_id, data=nuts,method="ML")
-aictab(list(c1,c2,c4))
+modelsN <- modelSummaryFunc(fitModsN,name="modelSummaryWetWeightNutsAlive.rds")
 
-AIC(c1)
-AIC(c2)
-AIC(c3)
-AIC(c4)
-Weights(c(AICc(c1),AICc(c2),AICc(c4)))
-
-summary(c2)
-modNuts <- c2
-
-plot(nuts$mAgeDays,residuals(c2))
-plot(fitted(c2),residuals(c2))
-#***********************************************
+coefSummaryFunc(modelFitOutputs=fitModsN,name="coefsWetWeightNutsAlive.rds",mods=modelsN)
 
 
 #**************Predict**************************
-modTreat1 <- lme(wet_weight ~ mAgeDays*name+I(mAgeDays^2)*name , random = ~1+mAgeDays| adults_id,data=pupWeight,method="ML")
-AIC(modTreat1)
-modTreat2 <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+name , random = ~1+mAgeDays| adults_id,data=pupWeight,method="ML")
-AIC(modTreat2)
+lmeCtrl <- lmeControl(opt='optim')
 
+modCtrl <- lme(fe2
+           ,random = re2
+           ,data=ctrl,method="ML",control=lmeCtrl)
 
-summary(modTreat2)
+modMate <- lme(fe2
+               ,random = re2
+               ,data=mate,method="ML",control=lmeCtrl)
+
+modNuts <- lme(fe2
+               ,random = re2
+               ,data=nuts,method="ML",control=lmeCtrl)
 
 summary(modCtrl)
 summary(modMate)
@@ -223,21 +330,38 @@ mate$pred2 <- predict(modMate,newdata=mate,level=1)
 nuts$pred1 <- predict(modNuts,newdata=nuts,level=0)
 nuts$pred2 <- predict(modNuts,newdata=nuts,level=1)
 
+Designmat <- model.matrix(eval(eval(modCtrl$call$fixed)[-2]), ctrl[-ncol(ctrl)])
+predvar <- diag(Designmat %*% modCtrl$varFix %*% t(Designmat))
+ctrl$SE <- sqrt(predvar) 
+ctrl$CI <- 1.96*sqrt(predvar+modCtrl$sigma^2)
+
+Designmat <- model.matrix(eval(eval(modMate$call$fixed)[-2]), mate[-ncol(mate)])
+predvar <- diag(Designmat %*% modMate$varFix %*% t(Designmat))
+mate$SE <- sqrt(predvar) 
+mate$CI <- 1.96*sqrt(predvar+modMate$sigma^2)#
+
+Designmat <- model.matrix(eval(eval(modNuts$call$fixed)[-2]), nuts[-ncol(nuts)])
+predvar <- diag(Designmat %*% modNuts$varFix %*% t(Designmat))
+nuts$SE <- sqrt(predvar) 
+nuts$CI <- 1.96*sqrt(predvar+modNuts$sigma^2)
+
+
 
 all <- rbind.data.frame(ctrl,mate,nuts)
 all$name <- as.factor(all$name)
 levels(all$name) <- c("Control","Mating delay","Nutritional stress")
 
+
 #*******************************Plot************************************************
-tiff("Fig4_wet_weight.tiff", height = 3, width = 6, units = 'in', compression="lzw", res=400)
+tiff("Fig3_wet_weight.tiff", height = 3, width = 6, units = 'in', compression="lzw", res=400)
 ggplot(all,aes()) +
-  scale_color_manual(values=c("#191919","#5E5E5E","#808080")) +
-  geom_line(data=all,aes(x=mAgeDays,y=pred2,group=adults_id),col="darkgrey",lwd=.2) + 
-  geom_line(data=all,aes(x=mAgeDays,y=pred1),col="black") + 
+  scale_color_manual(values=c("#875777","#eab051","#c0b9ac")) +
+  geom_line(data=all,aes(x=mAgeDays,y=pred2,group=adults_id,col=name),alpha=0.5,lwd=.2) + 
+  geom_line(data=all,aes(x=mAgeDays,y=pred1,col=name)) + 
   xlim(15,100) +
-  geom_point(data=weight.means,aes(x=mAgeBins,y=mean.weight),size=0.8) +
-  geom_errorbar(data=weight.means,aes(x=mAgeBins,ymin=lower, ymax=upper), width=.1,alpha=0.5) +
-  labs(  x="Mother age (days)"
+  geom_point(data=weight.means,aes(x=mAgeBins,y=mean.weight,col=name),size=0.8) +
+  geom_errorbar(data=weight.means,aes(x=mAgeBins,ymin=lower, ymax=upper,col=name), width=.1) +
+  labs(  x="Maternal age (days)"
          ,y="Offspring wet weight (mg)"
   )+ 
   theme_set(theme_bw()) +
@@ -249,7 +373,7 @@ ggplot(all,aes()) +
     ,legend.key.size = unit(0.8,"line")
     ,legend.background = element_blank()
     ,legend.text=element_text(size=9)
-    ,legend.position =c(0.8,0.2)
+    ,legend.position ="none"
     ,legend.title = element_blank()
     ,strip.background = element_rect(colour="white", fill="white")
     ,panel.border = element_blank()
@@ -257,14 +381,47 @@ ggplot(all,aes()) +
   facet_wrap(~name,ncol=3,scales="free_x")
 dev.off()
 
+#********plot population prediction and prediction intervals**************
+#*
+#*
+ggplot(all,aes()) +
+  scale_color_manual(values=c("#875777","#eab051","#c0b9ac")) +
+ # geom_line(data=all,aes(x=mAgeDays,y=pred2,group=adults_id,col=name),alpha=0.5,lwd=.2) + 
+  geom_line(data=all,aes(x=mAgeDays,y=pred1,col=name)) + 
+  xlim(15,100) +
+  geom_point(data=weight.means,aes(x=mAgeBins,y=mean.weight,col=name),size=0.8) +
+  geom_errorbar(data=weight.means,aes(x=mAgeBins,ymin=lower, ymax=upper,col=name), width=.1) +
+  labs(  x="Maternal age (days)"
+         ,y="Offspring wet weight (mg)"
+  )+ 
+  geom_ribbon(data = all, aes(ymin = pred1-CI, ymax = pred1+CI, x =mAgeDays,fill=name)
+              , alpha = 0.5, inherit.aes = FALSE) +
+  
+  theme_set(theme_bw()) +
+  theme(
+    axis.line = element_line(color = 'black')
+    ,text=element_text(size=10)
+    ,plot.margin=unit(c(0.2,0.1,0.1,0.1), "cm")
+    ,axis.text=element_text(size=8)
+    ,legend.key.size = unit(0.8,"line")
+    ,legend.background = element_blank()
+    ,legend.text=element_text(size=9)
+    ,legend.position ="none"
+    ,legend.title = element_blank()
+    ,strip.background = element_rect(colour="white", fill="white")
+    ,panel.border = element_blank()
+  ) 
 
+
+
+#*************************raw data plot**********************
 
 tiff("FigRawWetweight.tiff", height = 3, width = 6, units = 'in', compression="lzw", res=400)
 ggplot(pupWeight) +
   geom_point(aes(x=mAgeDays,y=wet_weight)
-              ,size=0.5) +
+             ,size=0.5) +
   ylab("Offspring wet weight (mg)") +
-  xlab("Mother age (days)") +
+  xlab("Maternal age (days)") +
   theme_set(theme_bw()) +
   theme(axis.line = element_line(color = 'black')
         ,text=element_text(size=9)
@@ -281,3 +438,26 @@ ggplot(pupWeight) +
   facet_wrap(~name)
 dev.off()
 
+
+#************residuals against explanatory variable***********
+ggplot(all,aes()) +
+  geom_point(data=all,aes(x=mAgeDays,y=wet_weight-pred2,group=adults_id),alpha=0.5,lwd=.2) + 
+  xlim(15,100) +
+  labs(  x="Mother age (days)"
+         ,y="Offspring wet weight (mg)"
+  )+ 
+  theme_set(theme_bw()) +
+  theme(
+    axis.line = element_line(color = 'black')
+    ,text=element_text(size=10)
+    ,plot.margin=unit(c(0.2,0.1,0.1,0.1), "cm")
+    ,axis.text=element_text(size=8)
+    ,legend.key.size = unit(0.8,"line")
+    ,legend.background = element_blank()
+    ,legend.text=element_text(size=9)
+    ,legend.position ="none"
+    ,legend.title = element_blank()
+    ,strip.background = element_rect(colour="white", fill="white")
+    ,panel.border = element_blank()
+  ) +
+  facet_wrap(~name,ncol=3,scales="free_x")

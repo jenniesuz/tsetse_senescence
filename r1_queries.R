@@ -22,7 +22,7 @@ mother.larvipositions <- query.func(query="SELECT T.name,T.date_of_emergence_min
                              WHERE T.treatment_id=A.treatment_id AND A.adults_id=L.adults_id")
 
 #*****pupae******
-pupae <- query.func(query="SELECT T.name, T.date_of_emergence_min, A.adults_id, A.well_number, L.larviposition_id, L.larviposition_date, L.larviposition_number, L.weekend, L.abortion_stage, L.abortion
+pupae <- query.func(query="SELECT T.name, T.date_of_emergence_min, A.adults_id, A.well_number,  L.larviposition_id, L.larviposition_date, L.larviposition_number, L.weekend, L.abortion_stage, L.abortion
                              ,L.wet_weight,P.pupa_length,P.pupa_width,P.emerged,P.date_emerged,P.date_of_death,P.weekend_death,P.sex,P.treatment, P.weight_emerged,L.dry_weight, L.residual_dry_weight
                              FROM treatment T, adults A, larviposition L, offspring P
                              WHERE T.treatment_id=A.treatment_id AND A.adults_id=L.adults_id AND L.larviposition_id=P.larviposition_id")

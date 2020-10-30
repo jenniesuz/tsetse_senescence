@@ -1,0 +1,121 @@
+---
+title: 'Supplementary File 10: statistics for the nutritional stress treatment excluding mothers that had died before the end of the experiment'
+toc: yes
+header includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+opts_chunk$set(echo = F)
+```
+
+\newpage
+
+This supplementary file contains summaries of the fitted models and corresponding fitted model coefficients and random effects. In each model summary table the number of parameters (k), log-likelihood (ll), AIC, or AICc (aic), difference between the minimal AIC/AICc and each AIC/AICc (deltaAIC), and model weights based on AIC/AICc (weights) are provided. For all tables maternal age is abbreviated to mAgeDays. Where rows contain NAs, the model in question produced a singular fit indicating overfitting. Model coefficients are only shown for models with weight > 0.
+
+For model coefficients, the model number (modelNumber) corresponds to the model number provided in the model summary tables. For fixed effects, the fitted value (est) is given wtih the lower and upper 95% confidence intervals.
+
+All tables are in ascending order of AIC/AICc.
+
+\blandscape
+
+\newpage
+
+## Probability of abortion
+
+### Model fits
+
+```{r }
+nutsAbortionTable <- readRDS(file = "modelSummaryAbortionNutsAlive.rds")
+kable(nutsAbortionTable,caption="Nutritional stress treatment: model fits for the probability of abortion") %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+### Model coefficients - fixed effects
+
+```{r }
+nutsAbortionCoefs <- readRDS(file = "coefsAbortionNutsAlive.rds")
+kable(nutsAbortionCoefs,caption="Nutritional stress treatment: model coefficients for the probability of abortion")  %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+
+\newpage
+
+## Offspring wet weight
+
+### Model fits
+
+```{r }
+nutsWetWeightTable <- readRDS(file = "modelSummaryWetWeightNutsAlive.rds")
+kable(nutsWetWeightTable,caption="Nutritional stress treatment: model fits for offspring wet weight") %>% 
+  kable_styling(latex_options=c("scale_down","hold_position"))
+```
+
+\elandscape
+
+
+### Model coefficients - fixed effects
+
+```{r }
+nutsWetWeightCoefs <- readRDS(file = "coefsWetWeightNutsAlive.rds")
+kable(nutsWetWeightCoefs,caption="Nutritional stress treatment: model coefficients for offspring wet weight") %>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+
+### Random effects
+
+```{r }
+nutsWetWeightCoefs <- readRDS(file = "RE coefsWetWeightNutsAlive.rds")
+kable(nutsWetWeightCoefs,caption="Nutritional stress treatment: random effects for offspring wet weight") %>% 
+  kable_styling(latex_options=c("hold_position"))
+```
+
+\newpage
+
+\blandscape
+
+## Offspring starvation tolerance
+
+### Model fits
+
+
+```{r }
+nutsWetWeightTable <- readRDS(file = "modelSummaryStarvNutsAlive.rds")
+kable(nutsWetWeightTable,caption="Nutritional stress treatment: model fits for days to starvation") %>% 
+  kable_styling(latex_options=c("scale_down","hold_position"))
+```
+
+
+\elandscape
+
+\newpage
+### Model coefficients - fixed effects
+
+
+```{r }
+nutsWetWeightCoefs <- readRDS(file = "coefsStarvNutsAlive.rds")
+kable(nutsWetWeightCoefs,caption="Nutritional stress treatment: model coefficients for days to starvation",longtable=TRUE) %>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+
+\newpage
+
+### Random effects
+
+```{r }
+nutsWetWeightCoefs <- readRDS(file = "RE coefsStarvNutsAlive.rds")
+kable(nutsWetWeightCoefs,caption="Nutritional stress treatment model random effects",longtable=TRUE)%>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+

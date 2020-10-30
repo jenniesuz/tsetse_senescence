@@ -113,11 +113,11 @@ haz <- cbind.data.frame(haz=haz,name=c(rep("Control",101)
 
 #****************************hazard plot***************************************
 hazardPlot <- ggplot(haz) +
-  scale_color_manual(values=c("#191919","#5E5E5E","#808080"))  +
+  scale_color_manual(values=c("#875777","#eab051","#c0b9ac"))  +
   geom_line(aes(x=rep(0:100,3),y=haz,col=name,linetype=name)) +
   theme_set(theme_bw()) +
   ggtitle("Hazard") +
-  xlab("Time since emergence (days)") +
+  xlab("Age (days)") +
   ylab("Smoothed hazard") +
   theme(axis.line = element_line(color = 'black')
         ,text=element_text(size=7)
@@ -134,12 +134,12 @@ hazardPlot <- ggplot(haz) +
   )
 
 #***********************Fig 2****************************************
-tiff("Fig2_mother_survival.tiff", height = 3, width = 5, units = 'in', compression="lzw", res=400)
+#tiff("Figmother_survival.tiff", height = 3, width = 5, units = 'in', compression="lzw", res=400)
 ggsv <- ggsurvplot(survFit, data=adult.deaths
            ,linetype="strata"
-           ,palette=c("#191919","#5E5E5E","#808080")
-           ,ylim=c(0.5,1)
-           ,xlab="Time since emergence (days)"
+           ,palette=c("#875777","#eab051","#c0b9ac")
+           ,ylim=c(0,1)
+           ,xlab="Age (days)"
            ,title="Survival"
            ,font.x=c(7)
            ,font.y=c(7)
@@ -157,13 +157,19 @@ ggsv <- ggsurvplot(survFit, data=adult.deaths
            ,legend.title = "Treatment:"
            ,legend.labs = c("Control", "Mating delay","Nutritional stress")) #+
 grid.arrange(ggsv$plot,hazardPlot,nrow=1)
-dev.off()
+#dev.off()
 
+ggsv$plot
 #**************************************Cox PHM***********************************
+
+
+
 
 fit.coxph <- coxph(survObj ~ 1,data=adult.deaths)
 fit.coxph1 <- coxph(survObj ~ name , 
                    data = adult.deaths)
+
+cox.zph(fit.coxph1, transform="km", global=TRUE)
 
 
 aictab(list(fit.coxph,fit.coxph1))
@@ -179,11 +185,15 @@ nuts <- adult.deaths[adult.deaths$name %in% "nutrition",]
 ctrl <- adult.deaths[adult.deaths$name %in% "control",]
 mate <- adult.deaths[adult.deaths$name %in% "mate_delay",]
 
+deadNuts <- unique(nuts$adults_id[nuts$dead %in% 1])
+
 survFitexpNut <- survreg(Surv(time=nuts$dayOfDeath,event=nuts$dead) ~ 1, dist="exponential" )
-survFitweibNut <- survreg(Surv(time=nuts$dayOfDeath,even=nuts$dead) ~ 1,dist="weibull")
+survFitweibNut <- survreg(Surv(time=nuts$dayOfDeath,event=nuts$dead) ~ 1,dist="weibull",data=nuts)
 AIC(survFitexpNut) 
 AIC(survFitweibNut) 
 Weights(c(AIC(survFitexpNut),AIC(survFitweibNut)))
+
+predict(survFitweibNut,type="response",newdata=nuts[1,])
 
 survFitexpCtrl <- survreg(Surv(time=ctrl$dayOfDeath,event=ctrl$dead) ~ 1, dist="exponential" )
 survFitweibCtrl <- survreg(Surv(time=ctrl$dayOfDeath,even=ctrl$dead) ~ 1,dist="weibull")

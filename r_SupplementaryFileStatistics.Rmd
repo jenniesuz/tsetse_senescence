@@ -1,0 +1,255 @@
+---
+title: 'Supplementary File 6: statistics'
+toc: yes
+header includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+opts_chunk$set(echo = F)
+```
+
+\newpage
+
+This supplementary file contains summaries of the fitted models and corresponding fitted model coefficients and random effects. In each model summary table the number of parameters (k), log-likelihood (ll), AIC, or AICc (aic), difference between the minimal AIC/AICc and each AIC/AICc (deltaAIC), and model weights based on AIC/AICc (weights) are provided. For all tables maternal age is abbreviated to mAgeDays. Where rows contain NAs, the model in question produced a singular fit indicating overfitting. Model coefficients are only shown for models with weight > 0.
+
+For model coefficients, the model number (modelNumber) corresponds to the model number provided in the model summary tables. For fixed effects, the fitted value (est) is given wtih the lower and upper 95% confidence intervals.
+
+All tables are in ascending order of AIC/AICc.
+
+\newpage
+\blandscape
+## Probability of spontaneous abortion
+Tables 1 to 3 provide a summary of the fitted models for the probability of abortion for the control, mating delay and nutritional stress treatments. AIC was used to assess model fits for the probability of abortion. For all treatments, including a random intercept and slope produced a singular fit and was therefore omitted from comparison.
+
+Tables 4 to 6 provide the corresponding coefficients on a logit scale, and 95% confidence intervals, for models in tables 1 to 3. The random effect variances for the models including a random intercept were: control - 0.636, mating delay - 0.912, nutritional stress - 0.815.
+
+
+### Model fits
+
+```{r }
+controlAbortionTable <- readRDS(file = "modelSummaryAbortionControl.rds")
+kable(controlAbortionTable,caption="Control treatment: model fits for the probability of abortion") %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+```{r }
+mateAbortionTable <- readRDS(file = "modelSummaryAbortionMate.rds")
+kable(mateAbortionTable,caption="Mating delay treatment: model fits for the probability of abortion") %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+```{r }
+nutsAbortionTable <- readRDS(file = "modelSummaryAbortionNuts.rds")
+kable(nutsAbortionTable,caption="Nutritional stress treatment: model fits for the probability of abortion") %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+\newpage
+
+### Model coefficients - fixed effects
+```{r }
+controlAbortionCoefs <- readRDS(file = "coefsAbortionControl.rds")
+kable(controlAbortionCoefs,caption="Control treatment: model coefficients for the probability of abortion")  %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+```{r }
+mateAbortionCoefs <- readRDS(file = "coefsAbortionMate.rds")
+kable(mateAbortionCoefs,caption="Mating delay treatment: model coefficients for the probability of abortion")  %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+```{r }
+nutsAbortionCoefs <- readRDS(file = "coefsAbortionNuts.rds")
+kable(nutsAbortionCoefs,caption="Nutritional stress treatment: model coefficients for the probability of abortion")  %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+\newpage
+## Offspring wet weight
+Tables 7 to 9  provide a summary of the fitted models for offspring wet weight as a function of maternal age for each treatment. AICc was used for comparison.
+Tables 10 to 12 provide the corresponding coefficients for model summarised in Tables 7 to 9.
+Tables 13 to 15 summarise the random effects variance for relevant models in Tables 7 to 9.
+
+
+### Model fits
+
+
+```{r }
+controlWetWeightTable <- readRDS(file = "modelSummaryWetWeightControl.rds")
+kable(controlWetWeightTable,caption="Control treatment: model fits for offspring wet weight") %>% 
+  kable_styling(latex_options=c("scale_down","hold_position"))
+```
+
+```{r }
+mateWetWeightTable <- readRDS(file = "modelSummaryWetWeightMate.rds")
+kable(mateWetWeightTable,caption="Mating delay treatment: model fits for offspring wet weight") %>% 
+  kable_styling(latex_options=c("scale_down","hold_position"))
+```
+
+\newpage
+
+```{r }
+nutsWetWeightTable <- readRDS(file = "modelSummaryWetWeightNuts.rds")
+kable(nutsWetWeightTable,caption="Nutritional stress treatment: model fits for offspring wet weight") %>% 
+  kable_styling(latex_options=c("scale_down","hold_position"))
+```
+\elandscape
+
+\newpage
+
+### Model coefficients - fixed effects
+
+```{r }
+controlWetWeightCoefs <- readRDS(file = "coefsWetWeightControl.rds")
+kable(controlWetWeightCoefs,caption="Control treatment: model coefficients for offspring wet weight")  %>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+
+
+```{r }
+mateWetWeightCoefs <- readRDS(file = "coefsWetWeightMate.rds")
+kable(mateWetWeightCoefs,caption="Mating delay treatment: model coefficients for offspring wet weight")  %>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+
+```{r }
+nutsWetWeightCoefs <- readRDS(file = "coefsWetWeightNuts.rds")
+kable(nutsWetWeightCoefs,caption="Nutritional stress treatment: model coefficients for offspring wet weight") %>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+
+\newpage
+
+
+### Random effects
+
+```{r }
+controlWetWeightCoefs <- readRDS(file = "RE coefsWetWeightControl.rds")
+kable(controlWetWeightCoefs,caption="Control treatment: random effects for offspring wet weight") %>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+
+```{r }
+mateWetWeightCoefs <- readRDS(file = "RE coefsWetWeightMate.rds")
+kable(mateWetWeightCoefs,caption="Mating delay treatment: random effects for offspring wet weight") %>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+
+
+```{r }
+nutsWetWeightCoefs <- readRDS(file = "RE coefsWetWeightNuts.rds")
+kable(nutsWetWeightCoefs,caption="Nutritional stress treatment: random effects for offspring wet weight") %>% 
+  kable_styling(latex_options=c("hold_position"))
+```
+
+
+\newpage
+
+\blandscape
+
+## Offspring starvation tolerance
+Tables 16 to 18 provide a summary of the fitted models for offspring starvation tolerance for each treatment.
+Tables 19 - 21 provide coefficients for each of the models in Tables 16 to 18.
+Tables 22 - 24 show random effects variance for each of the relevant models in Tables 16 to 18.
+
+\newpage
+
+### Model fits
+
+
+```{r }
+controlWetWeightTable <- readRDS(file = "modelSummaryStarvControl.rds")
+kable(controlWetWeightTable,caption="Control treatment: model fits for days to starvation") %>% 
+  kable_styling(latex_options=c("scale_down","hold_position"))
+```
+
+
+```{r }
+mateWetWeightTable <- readRDS(file = "modelSummaryStarvMate.rds")
+kable(mateWetWeightTable,caption="Mating delay treatment: model fits for days to starvation") %>% 
+  kable_styling(latex_options=c("scale_down","hold_position"))
+```
+
+
+```{r }
+nutsWetWeightTable <- readRDS(file = "modelSummaryStarvNuts.rds")
+kable(nutsWetWeightTable,caption="Nutritional stress treatment: model fits for days to starvation") %>% 
+  kable_styling(latex_options=c("scale_down","hold_position"))
+```
+
+\elandscape
+
+\newpage
+### Model coefficients - fixed effects
+
+```{r }
+controlWetWeightCoefs <- readRDS(file = "coefsStarvControl.rds")
+kable(controlWetWeightCoefs,caption="Control treatment: model coefficients for days to starvation",longtable=TRUE) %>% 
+  kable_styling(latex_options=c("hold_position")) 
+  
+```
+
+
+```{r }
+mateWetWeightCoefs <- readRDS(file = "coefsStarvMate.rds")
+kable(mateWetWeightCoefs,caption="Mating delay treatment: model coefficients for days to starvation",longtable=TRUE) %>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+
+
+```{r }
+nutsWetWeightCoefs <- readRDS(file = "coefsStarvNuts.rds")
+kable(nutsWetWeightCoefs,caption="Nutritional stress treatment: model coefficients for days to starvation",longtable=TRUE) %>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+
+\newpage
+
+### Random effects
+
+
+```{r }
+controlWetWeightCoefs <- readRDS(file = "RE coefsStarvControl.rds")
+kable(controlWetWeightCoefs,caption="Control treatment model random effects",longtable=TRUE)  %>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+
+\newpage
+
+```{r }
+mateWetWeightCoefs <- readRDS(file = "RE coefsStarvMate.rds")
+kable(mateWetWeightCoefs,caption="Mating delay treatment model random effects",longtable=TRUE) %>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+
+\newpage
+
+```{r }
+nutsWetWeightCoefs <- readRDS(file = "RE coefsStarvNuts.rds")
+kable(nutsWetWeightCoefs,caption="Nutritional stress treatment model random effects",longtable=TRUE)%>% 
+  kable_styling(latex_options=c("hold_position"))
+  
+```
+

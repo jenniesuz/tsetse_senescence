@@ -1,4 +1,5 @@
-# This script analyses pupal wet weight and produces Figure 4 of the manuscript
+# This script plots pupal fat against pupal wet weight for the supplementary
+# material
 source("r1_queries.R")
 
 library(plyr)        
@@ -20,6 +21,9 @@ pupWeight <- pupae[pupae$abortion %in% 0,] # take out abortions
 pupWeight <- pupWeight[!pupWeight$wet_weight%in%NA,]     # remove those - 31 of 1239 for which no wet weight data - either lost or crushed
 pupWeight <- pupWeight[!pupWeight$residual_dry_weight%in%NA,]
 pupWeight$fat <- pupWeight$dry_weight - pupWeight$residual_dry_weight
+
+cor(pupWeight$wet_weight,pupWeight$fat,method="pearson")
+
 
 #*******************************Plot************************************************
 tiff("fig_fatWetWeight.tiff", height = 4, width = 4, units = 'in', compression="lzw", res=400)

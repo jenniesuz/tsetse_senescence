@@ -1,0 +1,49 @@
+---
+title: "Supplementary File 7: generalised additive models for offspring wet weight"
+header includes:
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+opts_chunk$set(echo = F)
+```
+
+Generalised additive models were fitted using cubic regression splines. Maternal age was included as an explanatory variable and individual mother included as a random effect.
+Akaike's information criteria corrected for small sample size (AICc) was used to decide the most parsimonious number of knots (Tables 1 to 3). For each treatment, the most parsimonious model fit was then compared with model fits assuming a quadratic relationship between maternal age and offspring wet weight.
+
+```{r }
+controlGAMTable <- readRDS(file = "GAMfitsctrl.rds")
+kable(controlGAMTable,caption="Control treatment: AICc by number of knots") %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+
+```{r }
+mateGAMTable <- readRDS(file = "GAMfitsmate.rds")
+kable(mateGAMTable,caption="Mating delay treatment: AICc by number of knots") %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+
+```{r }
+nutsGAMTable <- readRDS(file = "GAMfitsnuts.rds")
+kable(nutsGAMTable,caption="Nutritional stress treatment: AICc by number of knots") %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+
+\newpage
+Figure 1. Comparison of generalised additive (GAM) and quadratic model fits for the effect of maternal age on offspring wet weight. Black dashed lines - quadratic fit, solid lines - GAM fits and standard error.
+
+```{r }
+plotMods <- readRDS(file = "FigSuppGAMWeight.rds")
+plotMods
+```
+
+
