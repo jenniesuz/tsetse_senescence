@@ -455,11 +455,11 @@ survAge.plot <- ggplot(ageEffect) +
   geom_line(aes(x=mAgeDays,y=pred,col=name,linetype=q)) +
   ylim(2.5,12) +
   scale_linetype_manual(values=c(1,2,3,4)) +
-  scale_color_manual(values=c("#875777","#eab051","#c0b9ac")) +
+  scale_color_manual(values=c("#875777","#eab051","#c0b9ac"),guide=F) +
   ylab("Predicted days surviving") +
   xlab("Maternal age (days)") +
   labs(title="b)"
-       ,color="Treatment"
+    #   ,color="Treatment"
        ,linetype="Wet weight") +
   theme_set(theme_bw()) +
   theme(axis.line = element_line(color = 'black')
