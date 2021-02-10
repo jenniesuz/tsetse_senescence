@@ -153,6 +153,52 @@ fitModRand <- function(fixedEffects,randomEffects,dat,whichAIC){
   return(list(coefs,parms,ll,aic,rand))
 }
 
+#************************************************************************
+bartlett.test(wet_weight ~ name,data=pupWeight)
+#*********************
+lmeCtrl <- lmeControl(opt='optim')
+
+mod <- lme(wet_weight ~ mAgeDays+I(mAgeDays^2)+mAgeatLastObs+name
+           ,random = ~1+mAgeDays+I(mAgeDays^2)| adults_id
+           ,data=pupWeight,method="ML",control=lmeCtrl)
+plot(mod)
+pupWeight$resids <- residuals(mod)
+plot(pupWeight$resids,pupWeight$mAge)
+boxplot(pupWeight$resids~pupWeight$name)
+
+
+bartlett.test(resids~ name,data=pupWeight)
+
+
+#********************************************************************
+
+mod <- gls(wet_weight ~ mAgeDays+I(mAgeDays^2)+mAgeatLastObs+name
+           ,data=pupWeight)
+plot(mod)
+pupWeight$resids <- residuals(mod)
+plot(pupWeight$resids,pupWeight$mAge)
+boxplot(pupWeight$resids~pupWeight$name)
+AIC(mod)
+
+vn <- varIdent(form= ~ 1 | name)
+
+mod <- gls(wet_weight ~ mAgeDays+I(mAgeDays^2)+mAgeatLastObs+name
+           ,data=pupWeight,weights=vn)
+
+summary(mod)
+pupWeight$resids <- residuals(mod)
+boxplot(pupWeight$resids~pupWeight$name)
+AIC(mod)
+
+
+
+
+
+
+
+
+
+#********************************************************************
 
 
 # formulas incl. random effects
@@ -174,6 +220,8 @@ re4a <- ~1| adults_id
 
 fe5 <- wet_weight ~ mAgeatLastObs
 re5 <- ~1| adults_id
+
+
 
 combinations <- list(c(fe1,re1)
                      ,c(fe1,re1a)
@@ -279,37 +327,6 @@ modelsC <- modelSummaryFunc(fitModsC,name="modelSummaryWetWeightControl.rds")
 
 coefSummaryFunc(modelFitOutputs=fitModsC,name="coefsWetWeightControl.rds",mods=modelsC)
 
-
-#*******************Mating delay treatment****************
-
-fitModsM <- lapply(4:length(combinations),function(x){
-  temp <- combinations[[x]]
-  fe <- as.formula(as.character(temp[1]))
-  re <- NA
-  if(!is.na(temp[2])){re <- as.formula(as.character(temp[2]))}
-  output <- fitModRand(fixedEffects=fe,randomEffects=re,dat=mate,whichAIC="aicc")
-  return(list(temp[1],temp[2],output))
-})
-
-modelsM <- modelSummaryFunc(fitModsM,name="modelSummaryWetWeightMate.rds")
-
-coefSummaryFunc(modelFitOutputs=fitModsM,name="coefsWetWeightMate.rds",mods=modelsM)
-
-
-#*******************Nutritional stress treatment****************
-
-
-fitModsN <- lapply(4:length(combinations),function(x){
-  temp <- combinations[[x]]
-  fe <- as.formula(as.character(temp[1]))
-  re <- NA
-  if(!is.na(temp[2])){re <- as.formula(as.character(temp[2]))}
-  output <- fitModRand(fixedEffects=fe,randomEffects=re,dat=nuts,whichAIC="aicc")
-  return(list(temp[1],temp[2],output))})
-
-modelsN <- modelSummaryFunc(fitModsN,name="modelSummaryWetWeightNuts.rds")
-
-coefSummaryFunc(modelFitOutputs=fitModsN,name="coefsWetWeightNuts.rds",mods=modelsN)
 
 
 #**************Predict**************************

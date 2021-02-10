@@ -20,8 +20,6 @@ mother.larvipositions$mAge <- mother.larvipositions$larviposition_date - mother.
 mother.larvipositions$mAge <- as.numeric(mother.larvipositions$mAge)
 levels(mother.larvipositions$name) <- c("Control","Mating delay","Nutritional stress")
 
-ddply(mother.larvipositions,.(name),summarise,numMothers=length(unique(adults_id)))
-
 abortion.data <- mother.larvipositions[mother.larvipositions$abortion %in% 1,]
 abortTreat <- ddply(abortion.data,.(name,adults_id),summarise,l=length(abortion))
 
@@ -37,36 +35,14 @@ mother.larvipositions$motherAgeatDeath <- mother.larvipositions$date_of_death - 
 mother.larvipositions$motherAgeatDeath <- as.numeric(mother.larvipositions$motherAgeatDeath)
 mother.larvipositions$motherAgeatDeath[mother.larvipositions$motherAgeatDeath %in% NA] <- 100
 
-#******************************************************************
-
-#********************************************************
-ctrl <- mother.larvipositions[mother.larvipositions$name %in% "Control",]
-mate <- mother.larvipositions[mother.larvipositions$name %in% "Mating delay",]
-nuts <- mother.larvipositions[mother.larvipositions$name %in% "Nutritional stress",]
-
-length(ctrl$motherAgeatDeath[ctrl$motherAgeatDeath<100])
-length(ctrl$motherAgeatDeath)
-# 17 of 629
-
-ctrl[ctrl$motherAgeatDeath<100,]
-
-length(mate$motherAgeatDeath[mate$motherAgeatDeath<100])
-length(mate$motherAgeatDeath)
-# 20 324
-
-length(nuts$motherAgeatDeath[nuts$motherAgeatDeath<100])
-length(nuts$motherAgeatDeath)
-# 134 498
-
-nutssub<-nuts[nuts$motherAgeatDeath<100,]
-
 #****************************Function to fit models*******************************
 fitModFunc <- function(form,modType,dat,whichAIC){
   if(modType=="me"){
    mod <- glmer(form
         ,family=binomial
         ,data=dat
-        , glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5)))
+       # , glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5))
+        )
   }else{
    mod <- glm(form
         ,family=binomial
@@ -74,8 +50,8 @@ fitModFunc <- function(form,modType,dat,whichAIC){
   }
   
   out <- summary(mod)
-  coefs <- coefficients(out)
-  coefsci <- confint(mod,devtol = 1e-04)
+ # coefs <- coefficients(out)
+ # coefsci <- confint(mod,devtol = 1e-04)
   
   ll <- logLik(mod)
   parms <- attributes(ll)$df 
@@ -84,13 +60,25 @@ fitModFunc <- function(form,modType,dat,whichAIC){
     aic <- AIC(mod)
   }else{aic <- AICc(mod)}
   
-  return(list(coefs,coefsci,parms,ll,aic))
+  #return(list(coefs,coefsci,parms,ll,aic))
+  list(parms,ll,aic)
 }
 
 #*************************************Model formula*******************************
-m1 <- abortion ~ mAge + motherAgeatDeath + (1| adults_id)
-m2 <- abortion ~ mAge + (1| adults_id )
-m3 <- abortion ~ mAge + motherAgeatDeath
+m1 <- abortion ~ mAge*name + motherAgeatDeath*name + (1| adults_id) #r
+m1a <- abortion ~ mAge*name + motherAgeatDeath + (1| adults_id) #r
+m1b <- abortion ~ mAge + motherAgeatDeath*name + (1| adults_id) #r
+m1c <- abortion ~ mAge + motherAgeatDeath + name + (1| adults_id) #r
+m2 <- abortion ~ mAge + (1| adults_id )   #r
+m2a <- abortion ~ mAge*name + (1| adults_id)   #r
+m2b <- abortion ~ mAge + name + (1| adults_id)   #r
+m3 <- abortion ~ mAge*name + motherAgeatDeath*name 
+m3a <- abortion ~ mAge*name + motherAgeatDeath
+m3b <- abortion ~ mAge + motherAgeatDeath*name
+m3c <- abortion ~ mAge + motherAgeatDeath + name
+m3d <- abortion ~ mAge + motherAgeatDeath
+m3e <- abortion ~ mAge*name
+m3f <- abortion ~ mAge + name
 m4 <- abortion ~ mAge
 m5 <- abortion ~ 1
 #********************************************************************************
@@ -100,9 +88,9 @@ modelSummaryFunc <- function(modelFitOutputs,form){
   
   model <-form
 
-  k <- modelFitOutputs[[3]]
-  ll <- as.numeric(modelFitOutputs[[4]])
-  aic <- modelFitOutputs[[5]]
+  k <- modelFitOutputs[[1]]
+  ll <- as.numeric(modelFitOutputs[[2]])
+  aic <- modelFitOutputs[[3]]
   
   modelSummary <- c(model,k,ll,aic)
   return(modelSummary)
@@ -124,16 +112,36 @@ coefSummaryFunc <- function(modelFit,model=1){
 #*****************************************************************************
 
 #************Control treatment*************
+fitm1 <- fitModFunc(form=m1,dat=mother.larvipositions,whichAIC="aic",modType="me") #  failed to converge
+fitm1a <- fitModFunc(form=m1a,dat=mother.larvipositions,whichAIC="aic",modType="me") # failed to converge
+fitm1b <- fitModFunc(form=m1b,dat=mother.larvipositions,whichAIC="aic",modType="me") # failed to converge
+fitm1c <- fitModFunc(form=m1c,dat=mother.larvipositions,whichAIC="aic",modType="me") # rescale variables?
+fitm2 <- fitModFunc(form=m2,dat=mother.larvipositions,whichAIC="aic",modType="me") 
+fitm2a <- fitModFunc(form=m2a,dat=mother.larvipositions,whichAIC="aic",modType="me") # rescale variables, very large eigenvalue ratio?
+fitm2b <- fitModFunc(form=m2b,dat=mother.larvipositions,whichAIC="aic",modType="me") 
+fitm3 <- fitModFunc(form=m3,dat=mother.larvipositions,whichAIC="aic",modType="fe") 
+fitm3a <- fitModFunc(form=m3a,dat=mother.larvipositions,whichAIC="aic",modType="fe") 
+fitm3b <- fitModFunc(form=m3b,dat=mother.larvipositions,whichAIC="aic",modType="fe") 
+fitm3c <- fitModFunc(form=m3c,dat=mother.larvipositions,whichAIC="aic",modType="fe") 
+fitm3d <- fitModFunc(form=m3d,dat=mother.larvipositions,whichAIC="aic",modType="fe") 
+fitm3e <- fitModFunc(form=m3e,dat=mother.larvipositions,whichAIC="aic",modType="fe") 
+fitm3f <- fitModFunc(form=m4,dat=mother.larvipositions,whichAIC="aic",modType="fe") 
+fitm4 <- fitModFunc(form=m4,dat=mother.larvipositions,whichAIC="aic",modType="fe") 
+fitm5 <-fitModFunc(form=m5,dat=mother.larvipositions,whichAIC="aic",modType="fe") 
 
-fitm2C <- fitModFunc(form=m1,dat=ctrl,whichAIC="aic",modType="me") 
-fitm4C <- fitModFunc(form=m4,dat=ctrl,whichAIC="aic",modType="fe")
-fitm5C <- fitModFunc(form=m5,dat=ctrl,whichAIC="aic",modType="fe")
+summarym2 <- modelSummaryFunc(fitm2,form=m2)
+summarym2b <- modelSummaryFunc(fitm2b,form=m2b)
+summarym3 <- modelSummaryFunc(fitm3,form=m3) 
+summarym3a <- modelSummaryFunc(fitm3a,form=m3a)
+summarym3b <- modelSummaryFunc(fitm3b,form=m3b)
+summarym3c <- modelSummaryFunc(fitm3c,form=m3c)
+summarym3d <- modelSummaryFunc(fitm3d,form=m3d)
+summarym3e <- modelSummaryFunc(fitm3e,form=m3e)
+summarym3f <- modelSummaryFunc(fitm3f,form=m3f)
+summarym4 <- modelSummaryFunc(fitm4,form=m4)
+summarym5 <- modelSummaryFunc(fitm5,form=m5)
 
-summarym2C <- modelSummaryFunc(fitm2C,form=m2)
-summarym4C <- modelSummaryFunc(fitm4C,form=m4)
-summarym5C <- modelSummaryFunc(fitm5C,form=m5)
-
-list <- list(summarym2C,summarym4C,summarym5C)
+list <- list(summarym2,summarym2b,summarym3,summarym3a,summarym3b,summarym3c,summarym3d,summarym3e,summarym3f,summarym4,summarym5)
 model <- as.character(sapply(list,'[[',1))
 k <- sapply(list,'[[',2)
 ll <- sapply(list,'[[',3)
@@ -149,156 +157,29 @@ modelSummary <- modelSummary[,c(7,1,2,3,4,5,6)]
 
 row.names(modelSummary) <- c()
 
-saveRDS(modelSummary, file = "modelSummaryAbortionControl.rds")
+saveRDS(modelSummary, file = "modelSummaryAbortionInclTreatment.rds")
 
-coefm2C <- coefSummaryFunc(fitm2C,model=2)
-coefm3C <- coefSummaryFunc(fitm3C,model=3)
-
-coefsTable <- rbind.data.frame(coefm3C,coefm2C)
-coefsTable <- coefsTable[order(coefsTable$parameter),]
-row.names(coefsTable) <- c()
-saveRDS(coefsTable,file="coefsAbortionControl.rds")
-
-#***************Mating delay treatment**********************
-#fitm1M <- fitModFunc(form=m1,dat=mate,whichAIC="aic",modType="me") # singular fit
-
-fitm2M <- fitModFunc(form=m2,dat=mate,whichAIC="aic",modType="me")
-fitm3M <- fitModFunc(form=m3,dat=mate,whichAIC="aic",modType="fe")
-fitm4M <- fitModFunc(form=m4,dat=mate,whichAIC="aic",modType="fe")
-
-
-
-summarym2M <- modelSummaryFunc(fitm2M,form=m2)
-summarym3M <- modelSummaryFunc(fitm3M,form=m3)
-summarym4M <- modelSummaryFunc(fitm4M,form=m4)
-
-list <- list(summarym2M,summarym3M,summarym4M)
-model <- as.character(sapply(list,'[[',1))
-k <- sapply(list,'[[',2)
-ll <- sapply(list,'[[',3)
-aic <- sapply(list,'[[',4)
-
-modelSummary <- cbind.data.frame(model,k,ll,aic)
-modelSummary <- modelSummary[order(modelSummary$aic),]
-
-modelSummary$deltaAIC <- round(modelSummary$aic - min(modelSummary$aic,na.rm=T),3)
-modelSummary$weights <- round(Weights(modelSummary$aic),3)
-modelSummary$modelNumber <- row.names(modelSummary)
-modelSummary <- modelSummary[,c(7,1,2,3,4,5,6)]
-row.names(modelSummary) <- c()
-saveRDS(modelSummary, file = "modelSummaryAbortionMate.rds")
-
-
-coefm2M <- coefSummaryFunc(fitm2M,model=2)
-coefm3M <- coefSummaryFunc(fitm3M,model=3)
-coefsTable <- rbind.data.frame(coefm3M,coefm2M)
-coefsTable <- coefsTable[order(coefsTable$parameter),]
-row.names(coefsTable) <- c()
-saveRDS(coefsTable,file="coefsAbortionMate.rds")
-
-#**********Nutritional stress treatment******
-
-m1 <- abortion ~ mAge + motherAgeatDeath + (1| adults_id)
-m2 <- abortion ~ mAge + motherAgeatDeath
-m3 <- abortion ~ mAge
-m4 <- abortion ~ motherAgeatDeath
-
-mod2<-glm(m2
-              ,family=binomial
-             ,data=nuts)
-mod3<-glm(m3
-            ,family=binomial
-              ,data=nuts)
-summary(mod2)
-sumamry(mod3)
-
-
-fitm1N <- fitModFunc(form=m1,dat=nuts,whichAIC="aic",modType="me") 
-
-fitm2N <- fitModFunc(form=m2,dat=nuts,whichAIC="aic",modType="fe")
-fitm3N <- fitModFunc(form=m3,dat=nuts,whichAIC="aic",modType="fe")
-
-
-summarym1N <- modelSummaryFunc(fitm1N,form=m1)
-summarym2N <- modelSummaryFunc(fitm2N,form=m2)
-summarym3N <- modelSummaryFunc(fitm3N,form=m3)
-
-list <- list(summarym2N,summarym3N,summarym4N)
-model <- as.character(sapply(list,'[[',1))
-k <- sapply(list,'[[',2)
-ll <- sapply(list,'[[',3)
-aic <- sapply(list,'[[',4)
-
-modelSummary <- cbind.data.frame(model,k,ll,aic)
-modelSummary <- modelSummary[order(modelSummary$aic),]
-
-modelSummary$deltaAIC <- round(modelSummary$aic - min(modelSummary$aic,na.rm=T),3)
-modelSummary$weights <- round(Weights(modelSummary$aic),3)
-modelSummary$modelNumber <- row.names(modelSummary)
-modelSummary <- modelSummary[,c(7,1,2,3,4,5,6)]
-row.names(modelSummary) <- c()
-saveRDS(modelSummary, file = "modelSummaryAbortionNuts.rds")
-
-
-coefm2N <- coefSummaryFunc(fitm2N,model=2)
-coefm3N <- coefSummaryFunc(fitm3N,model=3)
-coefsTable <- rbind.data.frame(coefm2N,coefm3N)
-coefsTable <- coefsTable[order(coefsTable$parameter),]
-row.names(coefsTable) <- c()
-saveRDS(coefsTable,file="coefsAbortionNuts.rds")
-
-m1 <- abortion ~ mAge + motherAgeatDeath + (1| adults_id)
-m2 <- abortion ~ mAge + (1| adults_id)
-m3 <- abortion ~ mAge
 #*****************************Predict*************************
-cMod <- glm(m3
-            ,family=binomial
-            ,data=ctrl)
-mMod <-  glm(m3
-             ,family=binomial
-             ,data=mate)
-nMod <- glmer(m2
+
+nMod <- glmer(m2b
               ,family=binomial
-              ,data=nuts)
-  
-#****************Control*******************
-ilink <- family(cMod)$linkinv
-ctrlP <- with(ctrl,
-                data.frame(mAge = seq(min(mAge), max(mAge),
-                                            length = 100)))
-ctrlP <- cbind(ctrlP, predict(cMod, ctrlP, type = "link", se.fit = TRUE)[1:2])
-ctrlP <- transform(ctrlP, Fitted = ilink(fit), Upper = ilink(fit + (1.96 * se.fit)),
-                     Lower = ilink(fit - (1.96 * se.fit)))
-ctrlP$name <- "Control"
-#************Mating delay******************
-ilink <- family(mMod)$linkinv
-mateP <- with(mate,
-              data.frame(mAge = seq(min(mAge), max(mAge),
-                                    length = 100)))
-mateP <- cbind(mateP, predict(mMod, mateP, type = "link", se.fit = TRUE)[1:2])
-mateP <- transform(mateP, Fitted = ilink(fit), Upper = ilink(fit + (1.96 * se.fit)),
-                   Lower = ilink(fit - (1.96 * se.fit)))
-mateP$name <- "Mating delay"
-#***********Nutritional stress************
+              ,data=mother.larvipositions)
+
 ilink <- family(nMod)$linkinv
-nutsP <- with(nuts,
-              data.frame(mAge = seq(min(mAge), max(mAge),
-                                    length = 100)))
-nutsP$Fitted <- predict(nMod,re.form=NA,newdat=nutsP,type="response")
-nutsP$fit <- as.numeric(nutsP$Fitted)
-merBootN <- bootMer(nMod, function(x) predict(x, newdata = nutsP,re.form=NA,type="response"), nsim = 100, re.form = NA)
 
-nutsP$Lower <- apply(merBootN$t, 2, function(x) as.numeric(quantile(x, probs=.025, na.rm=TRUE)))
-nutsP$Upper <- apply(merBootN$t, 2, function(x) as.numeric(quantile(x, probs=.975, na.rm=TRUE)))
+mother.larvipositions$Fitted <- predict(nMod
+                                        ,re.form=NA
+                                        ,newdat=mother.larvipositions
+                                        ,type="response")
 
+mother.larivpositions$fit <- as.numeric(mother.larvipositions$Fitted)
+merBootN <- bootMer(nMod, function(x) predict(x, newdata = mother.larvipositions,re.form=NA,type="response"), nsim = 100, re.form = NA)
 
-nutsP$name <- "Nutritional stress"
+mother.larvipositions$Lower <- apply(merBootN$t, 2, function(x) as.numeric(quantile(x, probs=.025, na.rm=TRUE)))
+mother.larvipositions$Upper <- apply(merBootN$t, 2, function(x) as.numeric(quantile(x, probs=.975, na.rm=TRUE)))
 
-
-newdat <- rbind.data.frame(ctrlP[,c("mAge","Fitted","Upper","Lower","name")],mateP[,c("mAge","Fitted","Upper","Lower","name")],nutsP[,c("mAge","Fitted","Upper","Lower","name")])
-
-newdat$name <- as.factor(newdat$name)
-levels(newdat$name) <- c("Control","Mating delay","Nutritional stress")
+mother.larvipositions$name <- as.factor(mother.larvipositions$name)
+levels(mother.larvipositions$name) <- c("Control","Mating delay","Nutritional stress")
 
 #**********************Plot*******************************************
 
@@ -350,16 +231,16 @@ names(abort.means)[4] <- "abortion"
 names(abort.means)[7] <- "mAge"
 
 
-tiff("Fig2_abortions.tiff", height = 5, width = 5, units = 'in', compression="lzw", res=400)
+tiff("Fig2_abortionsInclTreatment.tiff", height = 5, width = 5, units = 'in', compression="lzw", res=400)
 ggplot(mother.larvipositions,aes(as.numeric(mAge),abortion)) +
   scale_y_continuous( breaks=c(0,0.25,0.5,0.75,1), labels=c(0,0.25,0.5,0.75,1)) +
   #geom_jitter(width = 0.1, height = 0.1,col="darkgrey",size=0.5) +
   geom_point(data=abort.means,aes(mAge,abortion,col=name)) +
   geom_errorbar(data=abort.means,aes(x=mAge,ymin=lower,ymax=upper,col=name),width=.1) +
   
-  geom_ribbon(data = newdat, aes(ymin = Lower, ymax = Upper, x = mAge,fill=name)
+  geom_ribbon(data = mother.larvipositions, aes(ymin = Lower, ymax = Upper, x = mAge,fill=name)
               , alpha = 0.5, inherit.aes = FALSE) +
-  geom_line(data=newdat,aes(as.numeric(mAge),Fitted,col=name)) +
+  geom_line(data=mother.larvipositions,aes(as.numeric(mAge),Fitted,col=name)) +
   labs(  x="Maternal age (days)"
          ,y="Probability of abortion"
          #,title="b)"

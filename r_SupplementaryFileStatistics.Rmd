@@ -16,7 +16,7 @@ opts_chunk$set(echo = F)
 
 \newpage
 
-This supplementary file contains summaries of the fitted models and corresponding fitted model coefficients and random effects. In each model summary table the number of parameters (k), log-likelihood (ll), AIC, or AICc (aic), difference between the minimal AIC/AICc and each AIC/AICc (deltaAIC), and model weights based on AIC/AICc (weights) are provided. For all tables maternal age is abbreviated to mAgeDays. Where rows contain NAs, the model in question produced a singular fit indicating overfitting. Model coefficients are only shown for models with weight > 0.
+This supplementary file contains summaries of the fitted models and corresponding fitted model coefficients and random effects. In each model summary table the number of parameters (k), log-likelihood (ll), AIC, or AICc (aic), difference between the minimal AIC/AICc and each AIC/AICc (deltaAIC), and model weights based on AIC/AICc (weights) are provided. For all tables maternal age is abbreviated to mAge and age at last observation is abbreviated to mAgeatLastObs. Where rows contain NAs, the model in question produced a singular fit indicating overfitting. Model coefficients are only shown for models with weight > 0.
 
 For model coefficients, the model number (modelNumber) corresponds to the model number provided in the model summary tables. For fixed effects, the fitted value (est) is given wtih the lower and upper 95% confidence intervals.
 

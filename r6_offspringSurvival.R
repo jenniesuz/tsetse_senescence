@@ -18,6 +18,29 @@ pupae$larviposition_date <- as.Date(pupae$larviposition_date, format="%d/%m/%Y")
 pupae$mAgeDays <- pupae$larviposition_date - pupae$date_of_emergence_min
 pupae$mAgeDays <- as.numeric(pupae$mAgeDays)
 
+
+adult.deaths$date_of_emergence_min <- as.Date(adult.deaths$date_of_emergence_min
+                                              , format="%d/%m/%Y") # convert date columns to date format
+adult.deaths$date_of_death <- as.Date(adult.deaths$date_of_death,format="%d/%m/%Y")
+
+adult.deaths$name <- as.factor(adult.deaths$name)  # change treatment to a factor
+# days to death
+adult.deaths$mAgeatLastObs <- adult.deaths$date_of_death - adult.deaths$date_of_emergence_min
+adult.deaths$mAgeatLastObs <- as.numeric(adult.deaths$mAgeatLastObs)
+
+pupae$mAgeatLastObs <- NA
+
+mad <- lapply(unique(pupae$adults_id),function(x){
+  temp <- pupae[pupae$adults_id %in% x,] 
+  temp$mAgeatLastObs <- adult.deaths$mAgeatLastObs[adult.deaths$adults_id %in% x]
+  return(temp)
+})
+
+
+pupae <- do.call(rbind,mad)
+pupae$mAgeatLastObs[pupae$mAgeatLastObs %in% NA] <- 100
+
+
 pupEmerged <- pupae[pupae$emerged %in% "1.0",]            
 pupEmerged <- pupEmerged[!pupEmerged$wet_weight %in% NA,]
 pupEmerged$daysSurv <- pupEmerged$date_of_death - pupEmerged$date_emerged 
@@ -26,6 +49,40 @@ pupEmerged$dead <- 1
 pupEmerged$name <- as.factor(pupEmerged$name)
 
 levels(pupEmerged$name) <- c("Control","Mating delay","Nutritional \n stress")
+
+#***********calculate survival and confidence intervals for females per 10 days***********
+weights <- quantile(pupEmerged$wet_weight)
+
+pupEmerged$weightsQ <- with(pupEmerged, cut(wet_weight, 
+                                breaks=quantile(wet_weight, probs=seq(0,1, by=0.25), na.rm=TRUE), 
+                                include.lowest=TRUE
+                                 ,labels=c("Quartile 1","Quartile 2","Quartile 3","Quartile 4")
+                           
+))
+
+
+pupEmerged$mAgeBins <- cut(as.numeric(pupEmerged$mAgeDays)
+                          ,c(17,27,37,47,57,67,77,87,97)
+                          ,labels=c("22","32","42","52","62","72","82","92"))
+
+
+surv.means <- ddply(pupEmerged,.(name,weightsQ,mAgeBins),summarise,mean.surv = mean(daysSurv,na.rm=T))
+surv.sd <- ddply(pupEmerged,.(name,weightsQ,mAgeBins),summarise,sd.surv =sd(daysSurv,na.rm=T))
+surv.size <- ddply(pupEmerged,.(name,weightsQ,mAgeBins),summarise,size=length(daysSurv))
+surv.ci <- 1.96*(surv.sd$sd.surv/sqrt(surv.size$size))
+surv.means$upper <- surv.means$mean.surv+surv.ci
+surv.means$lower <- surv.means$mean.surv-surv.ci
+surv.means
+
+surv.means$mAgeBins <- as.numeric(as.character(surv.means$mAgeBins))
+surv.means$name <- as.factor(surv.means$name)
+levels(surv.means$name) <- c("Control","Mating delay","Nutritional stress")
+
+surv.means <- surv.means[-89,]
+
+#**************************************************************************************
+
+
 
 
 tiff("fig_offspringSurvHist.tiff", height = 3, width = 6, units = 'in', compression="lzw", res=400)
@@ -170,28 +227,28 @@ fe1a <- daysSurv ~ wet_weight + mAgeDays+I(mAgeDays^2)+I(mAgeDays^3)
 re1 <- ~1+mAgeDays+I(mAgeDays^2)+I(mAgeDays^3)| adults_id
 re1a <- ~1| adults_id
 
-fe2 <-  daysSurv ~ wet_weight + sex + mAgeDays+I(mAgeDays^2)
-fe2a <- daysSurv ~ wet_weight + mAgeDays+I(mAgeDays^2)
+fe2 <-  daysSurv ~ wet_weight + sex + mAgeDays+I(mAgeDays^2) + mAgeatLastObs
+fe2a <- daysSurv ~ wet_weight + mAgeDays+I(mAgeDays^2) + mAgeatLastObs
 re2 <-  ~1+mAgeDays+I(mAgeDays^2)| adults_id
 re2a <- ~1| adults_id
 
-fe3 <- daysSurv ~ wet_weight + sex + log(mAgeDays)
-fe3a <-  daysSurv ~ wet_weight + log(mAgeDays)
+fe3 <- daysSurv ~ wet_weight + sex + log(mAgeDays) + mAgeatLastObs
+fe3a <-  daysSurv ~ wet_weight + log(mAgeDays) + mAgeatLastObs
 re3 <- ~1+log(mAgeDays)| adults_id
 re3a <- ~1| adults_id
 
-fe4 <- daysSurv ~ wet_weight + sex + mAgeDays
-fe4a <- daysSurv ~ wet_weight + mAgeDays
+fe4 <- daysSurv ~ wet_weight + sex + mAgeDays + mAgeatLastObs
+fe4a <- daysSurv ~ wet_weight + mAgeDays + mAgeatLastObs
 re4 <- ~1+mAgeDays| adults_id
 re4a <- ~1| adults_id
 
-fe5 <- daysSurv ~ wet_weight + sex
+fe5 <- daysSurv ~ wet_weight + sex + mAgeatLastObs
 re5 <- ~1| adults_id
 
-fe6 <- daysSurv ~ wet_weight
+fe6 <- daysSurv ~ wet_weight + mAgeatLastObs
 re6 <- ~1| adults_id
 
-fe7 <- daysSurv ~ 1
+fe7 <- daysSurv ~ mAgeatLastObs
 re7 <- ~1| adults_id
 
 combinations <- list(c(fe1,re1)
@@ -306,7 +363,7 @@ coefSummaryFunc<- function(modelFitOutputs,name= "coefsWetWeightControl.rds",mod
 #*********************************CONTROL*************************
 
 
-fitModsC <- lapply(1:length(combinations),function(x){
+fitModsC <- lapply(7:length(combinations),function(x){
   temp <- combinations[[x]]
   fe <- as.formula(as.character(temp[1]))
   re <- NA
@@ -323,7 +380,7 @@ coefSummaryFunc(modelFitOutputs=fitModsC,name="coefsStarvControl.rds",mods=model
 #*********************************MATE DELAY*************************
 
 
-fitModsM <- lapply(1:length(combinations),function(x){
+fitModsM <- lapply(7:length(combinations),function(x){
   temp <- combinations[[x]]
   fe <- as.formula(as.character(temp[1]))
   re <- NA
@@ -339,7 +396,7 @@ coefSummaryFunc(modelFitOutputs=fitModsM,name="coefsStarvMate.rds",mods=modelsM)
 
 #*********************************NUTRITIONAL STRESS*************************
 
-fitModsN <- lapply(1:length(combinations),function(x){
+fitModsN <- lapply(7:length(combinations),function(x){
   temp <- combinations[[x]]
   fe <- as.formula(as.character(temp[1]))
   re <- NA
@@ -360,12 +417,12 @@ coefSummaryFunc(modelFitOutputs=fitModsN,name="coefsStarvNuts.rds",mods=modelsN)
 
 ctrlMod <- lm(fe2 ,data=ctrl)
 mateMod <- lm(fe2, data=mate)
-nutsMod <- lmer(daysSurv ~ wet_weight + sex + mAgeDays + I(mAgeDays^2) + I(mAgeDays^3) + (1  | adults_id)
+nutsMod <- lmer(daysSurv ~ wet_weight + sex + mAgeDays + I(mAgeDays^2) + mAgeatLastObs + (1  | adults_id)
                ,data=nuts,REML=F)
 
 #*************Control**********
 predFuncC <- function(weightDat=as.numeric(weights[1])) {
-  ctrlAgedat <- cbind.data.frame(wet_weight=rep(rep(weightDat,100),2),mAgeDays=rep(c(1:100),2),sex=c(rep("M",100),rep("F",100)))
+  ctrlAgedat <- cbind.data.frame(wet_weight=rep(rep(weightDat,100),2),mAgeDays=rep(c(1:100),2),sex=c(rep("M",100),rep("F",100)),mAgeatLastObs=rep(100,200))
   ctrlPred <- data.frame(predict(ctrlMod
                        ,newdata=ctrlAgedat
                        ,interval="confidence"))
@@ -388,7 +445,7 @@ ctrlAge <- rbind.data.frame(ctrlAge1,ctrlAge2,ctrlAge3,ctrlAge4)
 
 #*******************mating delay*******************
 predFuncM <- function(weightDat=as.numeric(weights[1])) {
-  mateAgedat <- cbind.data.frame(wet_weight=rep(rep(weightDat,100),2),mAgeDays=rep(c(1:100),2),sex=c(rep("M",100),rep("F",100)))
+  mateAgedat <- cbind.data.frame(wet_weight=rep(rep(weightDat,100),2),mAgeDays=rep(c(1:100),2),sex=c(rep("M",100),rep("F",100)),mAgeatLastObs=rep(100,200))
   matePred <- data.frame(predict(mateMod
                                  ,newdata=mateAgedat
                                  ,interval="confidence"))
@@ -412,7 +469,7 @@ mateAge <- rbind.data.frame(mateAge1,mateAge2,mateAge3,mateAge4)
 #****************Nutritional stress************************
 #*
 predFuncN <- function(weightDat=as.numeric(weights[1])) {
-  nutsAgedat <- cbind.data.frame(wet_weight=rep(rep(weightDat,100),2),mAgeDays=rep(c(1:100),2),sex=c(rep("M",100),rep("F",100)),adults_id=rep(rep(113,100),2))
+  nutsAgedat <- cbind.data.frame(wet_weight=rep(rep(weightDat,100),2),mAgeDays=rep(c(1:100),2),sex=c(rep("M",100),rep("F",100)),adults_id=rep(rep(113,100),2),mAgeatLastObs=rep(100,200))
   nutsPred <- data.frame(predict(nutsMod
                                  ,newdata=nutsAgedat))
   nutsAgedat$pred <- nutsPred[,1]
@@ -451,9 +508,15 @@ cols <- c("#cccccc"
           ,"#636363"
           ,"#252525")
 
+names(surv.means) <- c("name","q","mAgeDays","pred","upper","lower")
+
 survAge.plot <- ggplot(ageEffect) +
+ # geom_point(data=pupEmerged,aes(mAgeDays,daysSurv,col=name)) +
+  geom_point(data=surv.means,aes(mAgeDays,pred,col=name),alpha=0.2) +
+  geom_errorbar(data=surv.means,aes(mAgeDays,ymin=lower,ymax=upper,col=name),alpha=0.2,width=0.1) +
   geom_line(aes(x=mAgeDays,y=pred,col=name,linetype=q)) +
   ylim(2.5,12) +
+  xlim(20,100) +
   scale_linetype_manual(values=c(1,2,3,4)) +
   scale_color_manual(values=c("#875777","#eab051","#c0b9ac")) +
   ylab("Predicted days surviving") +
@@ -511,24 +574,4 @@ dev.off()
 tiff("Fig4_offspringSurv.tiff", height = 4, width =5.5, units = 'in', compression="lzw", res=400)
 grid.arrange(weightSexPlot,survAge.plot,ncol=2,widths = 1:2)
 dev.off()
-
-
-#***************nutritional stress with alive females only***********
-deadNuts
-nuts <- nuts[!nuts$adults_id %in% deadNuts,]
-
-
-fitModsN <- lapply(1:length(combinations),function(x){
-  temp <- combinations[[x]]
-  fe <- as.formula(as.character(temp[1]))
-  re <- NA
-  if(!is.na(temp[2])){re <- as.formula(as.character(temp[2]))}
-  output <- fitModRand(fixedEffects=fe,randomEffects=re,dat=nuts,whichAIC="aicc")
-  return(list(temp[1],temp[2],output))
-})
-
-
-modelsN <- modelSummaryFunc(fitModsN,name="modelSummaryStarvNutsAlive.rds")
-
-coefSummaryFunc(modelFitOutputs=fitModsN,name="coefsStarvNutsAlive.rds",mods=modelsN)
 
