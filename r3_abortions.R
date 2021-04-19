@@ -25,8 +25,6 @@ ddply(mother.larvipositions,.(name),summarise,numMothers=length(unique(adults_id
 abortion.data <- mother.larvipositions[mother.larvipositions$abortion %in% 1,]
 abortTreat <- ddply(abortion.data,.(name,adults_id),summarise,l=length(abortion))
 
-
-
 mother.larvipositions$date_of_emergence_min <- as.Date(mother.larvipositions$date_of_emergence_min
                                               , format="%d/%m/%Y") # convert date columns to date format
 mother.larvipositions$date_of_death <- as.Date(mother.larvipositions$date_of_death,format="%d/%m/%Y")
@@ -48,7 +46,15 @@ length(ctrl$motherAgeatDeath[ctrl$motherAgeatDeath<100])
 length(ctrl$motherAgeatDeath)
 # 17 of 629
 
+ctrlSubs <- cbind.data.frame(motherAgeatDeath=ctrl$motherAgeatDeath,abortion=ctrl$abortion)
+ctrlSubs <- ctrlSubs[order(ctrlSubs$motherAgeatDeath),]
+
+mateSubs <- cbind.data.frame(motherAgeatDeath=mate$motherAgeatDeath,abortion=mate$abortion)
+mateSubs <- mateSubs[order(mateSubs$motherAgeatDeath),]
+
+
 ctrl[ctrl$motherAgeatDeath<100,]
+
 
 length(mate$motherAgeatDeath[mate$motherAgeatDeath<100])
 length(mate$motherAgeatDeath)
@@ -254,6 +260,13 @@ m3 <- abortion ~ mAge
 cMod <- glm(m3
             ,family=binomial
             ,data=ctrl)
+
+summary(cMod)
+
+mAgectrlest <- summary(cMod)$coefficients
+ctrlPara<-mAgectrlest[2,1]
+ctrlse<-mAgectrlest[2,2]
+
 mMod <-  glm(m3
              ,family=binomial
              ,data=mate)
@@ -261,6 +274,8 @@ nMod <- glmer(m2
               ,family=binomial
               ,data=nuts)
   
+
+
 #****************Control*******************
 ilink <- family(cMod)$linkinv
 ctrlP <- with(ctrl,

@@ -327,9 +327,43 @@ modNuts <- lme(fe2
                ,random = re2
                ,data=nuts,method="ML",control=lmeCtrl)
 
-summary(modCtrl)
+sum
+# -0.004000 (0.000253)
+# 0.517410 (0.027371)
 summary(modMate)
+# -0.004224 (0.000621)
+# 0.564643 (0.080720)
 summary(modNuts)
+# -0.004024 (0.0003913)
+# 0.503880 (0.0423642)
+
+#
+(0.517410 - 0.564643) / (sqrt((0.027371)^2 + (0.080720)^2  ))
+pnorm(-abs(0.554))
+
+(0.517410 - 0.503880) / (sqrt((0.027371)^2 + (0.0423642)^2  ))
+pnorm(-abs(0.268))
+
+
+#squared term
+# control - mating delay
+(-0.004000 - -0.004224) / (sqrt((0.000253)^2 + (0.000621)^2  ))
+#0.334
+pnorm(-abs(0.334))
+
+# control - nutritional stress
+(-0.004000 - -0.004024) / (sqrt((0.000253)^2 + (0.0003913)^2  ))
+#0.05150586
+pnorm(-abs(0.05150586))
+
+
+
+library(sjstats)
+performance::r2(modCtrl) # conditional 0.640, marginal 0.379
+performance::r2(modNuts) # conditional 0.526, marginal 0.291
+performance::r2(modMate) # conditional 0.658, marginal 0.071
+
+
 
 ctrl$pred1 <- predict(modCtrl,newdata=ctrl,level=0)
 ctrl$pred2 <- predict(modCtrl,newdata=ctrl,level=1)

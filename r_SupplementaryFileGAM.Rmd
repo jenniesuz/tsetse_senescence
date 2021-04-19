@@ -1,5 +1,5 @@
 ---
-title: "Supplementary File 7: generalised additive models for offspring wet weight"
+title: "Supplementary File 9: generalised additive models for offspring wet weight"
 header includes:
 output: pdf_document
 ---

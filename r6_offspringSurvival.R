@@ -420,6 +420,11 @@ mateMod <- lm(fe2, data=mate)
 nutsMod <- lmer(daysSurv ~ wet_weight + sex + mAgeDays + I(mAgeDays^2) + mAgeatLastObs + (1  | adults_id)
                ,data=nuts,REML=F)
 
+
+performance::r2(ctrlMod) # conditional 0.347, 0.337 marginal
+performance::r2(mateMod) # conditional 0.291, 0.191 marginal 
+performance::r2(nutsMod) # conditional 0.634, 0.551 marginal 
+
 #*************Control**********
 predFuncC <- function(weightDat=as.numeric(weights[1])) {
   ctrlAgedat <- cbind.data.frame(wet_weight=rep(rep(weightDat,100),2),mAgeDays=rep(c(1:100),2),sex=c(rep("M",100),rep("F",100)),mAgeatLastObs=rep(100,200))
@@ -518,11 +523,11 @@ survAge.plot <- ggplot(ageEffect) +
   ylim(2.5,12) +
   xlim(20,100) +
   scale_linetype_manual(values=c(1,2,3,4)) +
-  scale_color_manual(values=c("#875777","#eab051","#c0b9ac")) +
+  scale_color_manual(values=c("#875777","#eab051","#c0b9ac"),guide=F) +
   ylab("Predicted days surviving") +
   xlab("Maternal age (days)") +
   labs(title="b)"
-       ,color="Treatment"
+    #   ,color="Treatment"
        ,linetype="Wet weight") +
   theme_set(theme_bw()) +
   theme(axis.line = element_line(color = 'black')
