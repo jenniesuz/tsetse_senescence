@@ -81,7 +81,7 @@ fitModFunc <- function(form,modType,dat,whichAIC){
   
   out <- summary(mod)
   coefs <- coefficients(out)
-  coefsci <- confint(mod,devtol = 1e-04)
+  coefsci <- confint(mod,method="Wald")
   
   ll <- logLik(mod)
   parms <- attributes(ll)$df 
@@ -94,11 +94,10 @@ fitModFunc <- function(form,modType,dat,whichAIC){
 }
 
 #*************************************Model formula*******************************
-m1 <- abortion ~ mAge + motherAgeatDeath + (1| adults_id)
+m1 <- abortion ~ mAge  + (mAge| adults_id)
 m2 <- abortion ~ mAge + (1| adults_id )
-m3 <- abortion ~ mAge + motherAgeatDeath
-m4 <- abortion ~ mAge
-m5 <- abortion ~ 1
+m3 <- abortion ~ mAge 
+m4 <- abortion ~ 1
 #********************************************************************************
 
 #******************************Function to summarise outputs*********************
@@ -130,16 +129,16 @@ coefSummaryFunc <- function(modelFit,model=1){
 #*****************************************************************************
 
 #************Control treatment*************
-
-fitm2C <- fitModFunc(form=m1,dat=ctrl,whichAIC="aic",modType="me") 
+fitm1C <- fitModFunc(form=m1,dat=ctrl,whichAIC="aic",modType="me") # singular fit
+fitm2C <- fitModFunc(form=m2,dat=ctrl,whichAIC="aic",modType="me") 
+fitm3C <- fitModFunc(form=m3,dat=ctrl,whichAIC="aic",modType="fe")
 fitm4C <- fitModFunc(form=m4,dat=ctrl,whichAIC="aic",modType="fe")
-fitm5C <- fitModFunc(form=m5,dat=ctrl,whichAIC="aic",modType="fe")
 
 summarym2C <- modelSummaryFunc(fitm2C,form=m2)
+summarym3C <- modelSummaryFunc(fitm3C,form=m3)
 summarym4C <- modelSummaryFunc(fitm4C,form=m4)
-summarym5C <- modelSummaryFunc(fitm5C,form=m5)
 
-list <- list(summarym2C,summarym4C,summarym5C)
+list <- list(summarym2C,summarym3C,summarym4C)
 model <- as.character(sapply(list,'[[',1))
 k <- sapply(list,'[[',2)
 ll <- sapply(list,'[[',3)
@@ -159,8 +158,9 @@ saveRDS(modelSummary, file = "modelSummaryAbortionControl.rds")
 
 coefm2C <- coefSummaryFunc(fitm2C,model=2)
 coefm3C <- coefSummaryFunc(fitm3C,model=3)
+coefm4C <- coefSummaryFunc(fitm4C,model=4)
 
-coefsTable <- rbind.data.frame(coefm3C,coefm2C)
+coefsTable <- rbind.data.frame(coefm3C,coefm2C,coefm4C)
 coefsTable <- coefsTable[order(coefsTable$parameter),]
 row.names(coefsTable) <- c()
 saveRDS(coefsTable,file="coefsAbortionControl.rds")
@@ -176,9 +176,8 @@ fitm4M <- fitModFunc(form=m4,dat=mate,whichAIC="aic",modType="fe")
 
 summarym2M <- modelSummaryFunc(fitm2M,form=m2)
 summarym3M <- modelSummaryFunc(fitm3M,form=m3)
-summarym4M <- modelSummaryFunc(fitm4M,form=m4)
 
-list <- list(summarym2M,summarym3M,summarym4M)
+list <- list(summarym2M,summarym3M)
 model <- as.character(sapply(list,'[[',1))
 k <- sapply(list,'[[',2)
 ll <- sapply(list,'[[',3)
@@ -204,30 +203,15 @@ saveRDS(coefsTable,file="coefsAbortionMate.rds")
 
 #**********Nutritional stress treatment******
 
-m1 <- abortion ~ mAge + motherAgeatDeath + (1| adults_id)
-m2 <- abortion ~ mAge + motherAgeatDeath
-m3 <- abortion ~ mAge
-m4 <- abortion ~ motherAgeatDeath
 
-mod2<-glm(m2
-              ,family=binomial
-             ,data=nuts)
-mod3<-glm(m3
-            ,family=binomial
-              ,data=nuts)
-summary(mod2)
-sumamry(mod3)
-
-
-fitm1N <- fitModFunc(form=m1,dat=nuts,whichAIC="aic",modType="me") 
-
-fitm2N <- fitModFunc(form=m2,dat=nuts,whichAIC="aic",modType="fe")
+fitm2N <- fitModFunc(form=m2,dat=nuts,whichAIC="aic",modType="me") 
 fitm3N <- fitModFunc(form=m3,dat=nuts,whichAIC="aic",modType="fe")
+fitm4N <- fitModFunc(form=m4,dat=nuts,whichAIC="aic",modType="fe")
 
 
-summarym1N <- modelSummaryFunc(fitm1N,form=m1)
-summarym2N <- modelSummaryFunc(fitm2N,form=m2)
-summarym3N <- modelSummaryFunc(fitm3N,form=m3)
+summarym2N <- modelSummaryFunc(fitm2N,form=m1)
+summarym3N <- modelSummaryFunc(fitm3N,form=m2)
+summarym4N <- modelSummaryFunc(fitm4N,form=m3)
 
 list <- list(summarym2N,summarym3N,summarym4N)
 model <- as.character(sapply(list,'[[',1))
@@ -253,27 +237,45 @@ coefsTable <- coefsTable[order(coefsTable$parameter),]
 row.names(coefsTable) <- c()
 saveRDS(coefsTable,file="coefsAbortionNuts.rds")
 
-m1 <- abortion ~ mAge + motherAgeatDeath + (1| adults_id)
-m2 <- abortion ~ mAge + (1| adults_id)
-m3 <- abortion ~ mAge
-#*****************************Predict*************************
+
+#*********Predict with lowest AIC models*************************
 cMod <- glm(m3
             ,family=binomial
             ,data=ctrl)
 
-summary(cMod)
-
-mAgectrlest <- summary(cMod)$coefficients
-ctrlPara<-mAgectrlest[2,1]
-ctrlse<-mAgectrlest[2,2]
-
 mMod <-  glm(m3
              ,family=binomial
              ,data=mate)
+
+
 nMod <- glmer(m2
               ,family=binomial
               ,data=nuts)
-  
+#***************************************************************
+# get maternal age coefficient and standard errors
+getParmVals <- function(mod){
+  modelSummary <- summary(mod)$coefficients
+  inter<-modelSummary[1,1]
+  coef<-modelSummary[2,1]
+  se<-modelSummary[2,2]
+  return(c(inter=inter,coef=coef,se=se))
+}
+
+ctrlCoef <- getParmVals(cMod)
+mateCoef <- getParmVals(mMod)
+nutsCoef <- getParmVals(nMod)
+
+ztestfunc <- function(coef1,coef2,se1,se2){
+  z <- (coef1 - coef2) / sqrt(se1^2 + se2^2)
+  p <- pnorm(-abs(z))
+    return(c(p=p,z=z))
+}
+
+
+matez <- ztestfunc(ctrlCoef[2],mateCoef[2],ctrlCoef[3],mateCoef[3])
+matez
+nutsz <- ztestfunc(ctrlCoef[2],nutsCoef[2],ctrlCoef[3],nutsCoef[3])
+nutsz
 
 
 #****************Control*******************

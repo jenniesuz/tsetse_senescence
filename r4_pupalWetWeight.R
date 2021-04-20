@@ -154,7 +154,6 @@ fitModRand <- function(fixedEffects,randomEffects,dat,whichAIC){
 }
 
 
-
 # formulas incl. random effects
 fe1 <- wet_weight ~ mAgeDays+I(mAgeDays^2)+I(mAgeDays^3)+mAgeatLastObs
 re1 <- ~1+mAgeDays+I(mAgeDays^2)+I(mAgeDays^3)| adults_id
