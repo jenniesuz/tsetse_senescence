@@ -278,6 +278,15 @@ nutsz <- ztestfunc(ctrlCoef[2],nutsCoef[2],ctrlCoef[3],nutsCoef[3])
 nutsz
 
 
+oddsWithAge <- function(age1,age2,interCoef,ageCoef){
+  age1logOdds <- interCoef + ageCoef*age1
+  age2logOdds <- interCoef + ageCoef*age2
+  return(exp(age2logOdds-age1logOdds))
+}
+
+oddsWithAge(60,61,nutsCoef[1],nutsCoef[2]) # 4.6% increase
+oddsWithAge(60,61,ctrlCoef[1],ctrlCoef[2]) # 7.2% increase
+
 #****************Control*******************
 ilink <- family(cMod)$linkinv
 ctrlP <- with(ctrl,

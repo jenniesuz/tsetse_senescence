@@ -421,6 +421,37 @@ nutsMod <- lmer(daysSurv ~ wet_weight + sex + mAgeDays + I(mAgeDays^2) + mAgeatL
                ,data=nuts,REML=F)
 
 
+getParmVals <- function(mod){
+  modelSummary <- coef(summary(mod))
+  inter<-modelSummary[1,1]
+  coefAge<-modelSummary[3,1]
+  coefAge2<-modelSummary[4,1]
+  seAge<-modelSummary[3,2]
+  seAge2<-modelSummary[4,2]
+  return(c(inter=inter,coefAge=coefAge,coefAge2=coefAge2,seAge=seAge,seAge2=seAge2))
+}
+
+ctrlCoef <- getParmVals(modCtrl)
+mateCoef <- getParmVals(modMate)
+nutsCoef <- getParmVals(modNuts)
+
+ztestfunc <- function(coef1,coef2,se1,se2){
+  z <- (coef1 - coef2) / sqrt(se1^2 + se2^2)
+  p <- pnorm(-abs(z))
+  return(c(p=p,z=z))
+}
+
+
+matezAge <- ztestfunc(ctrlCoef[2],mateCoef[2],ctrlCoef[4],mateCoef[4])
+matezAge
+nutszAge <- ztestfunc(ctrlCoef[2],nutsCoef[2],ctrlCoef[4],nutsCoef[4])
+nutszAge
+
+matezAge2 <- ztestfunc(ctrlCoef[3],mateCoef[3],ctrlCoef[5],mateCoef[5])
+matezAge2
+nutszAge2 <- ztestfunc(ctrlCoef[3],nutsCoef[3],ctrlCoef[5],nutsCoef[5])
+nutszAge2
+
 performance::r2(ctrlMod) # conditional 0.347, 0.337 marginal
 performance::r2(mateMod) # conditional 0.291, 0.191 marginal 
 performance::r2(nutsMod) # conditional 0.634, 0.551 marginal 

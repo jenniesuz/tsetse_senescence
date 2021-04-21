@@ -326,43 +326,43 @@ modNuts <- lme(fe2
                ,random = re2
                ,data=nuts,method="ML",control=lmeCtrl)
 
-sum
-# -0.004000 (0.000253)
-# 0.517410 (0.027371)
-summary(modMate)
-# -0.004224 (0.000621)
-# 0.564643 (0.080720)
-summary(modNuts)
-# -0.004024 (0.0003913)
-# 0.503880 (0.0423642)
 
-#
-(0.517410 - 0.564643) / (sqrt((0.027371)^2 + (0.080720)^2  ))
-pnorm(-abs(0.554))
+getParmVals <- function(mod){
+  modelSummary <- coef(summary(mod))
+  inter<-modelSummary[1,1]
+  coefAge<-modelSummary[2,1]
+  coefAge2<-modelSummary[3,1]
+  seAge<-modelSummary[2,2]
+  seAge2<-modelSummary[3,2]
+  return(c(inter=inter,coefAge=coefAge,coefAge2=coefAge2,seAge=seAge,seAge2=seAge2))
+}
 
-(0.517410 - 0.503880) / (sqrt((0.027371)^2 + (0.0423642)^2  ))
-pnorm(-abs(0.268))
+ctrlCoef <- getParmVals(modCtrl)
+mateCoef <- getParmVals(modMate)
+nutsCoef <- getParmVals(modNuts)
+
+ztestfunc <- function(coef1,coef2,se1,se2){
+  z <- (coef1 - coef2) / sqrt(se1^2 + se2^2)
+  p <- pnorm(-abs(z))
+  return(c(p=p,z=z))
+}
 
 
-#squared term
-# control - mating delay
-(-0.004000 - -0.004224) / (sqrt((0.000253)^2 + (0.000621)^2  ))
-#0.334
-pnorm(-abs(0.334))
+matezAge <- ztestfunc(ctrlCoef[2],mateCoef[2],ctrlCoef[4],mateCoef[4])
+matezAge
+nutszAge <- ztestfunc(ctrlCoef[2],nutsCoef[2],ctrlCoef[4],nutsCoef[4])
+nutszAge
 
-# control - nutritional stress
-(-0.004000 - -0.004024) / (sqrt((0.000253)^2 + (0.0003913)^2  ))
-#0.05150586
-pnorm(-abs(0.05150586))
-
+matezAge2 <- ztestfunc(ctrlCoef[3],mateCoef[3],ctrlCoef[5],mateCoef[5])
+matezAge2
+nutszAge2 <- ztestfunc(ctrlCoef[3],nutsCoef[3],ctrlCoef[5],nutsCoef[5])
+nutszAge2
 
 
 library(sjstats)
 performance::r2(modCtrl) # conditional 0.640, marginal 0.379
 performance::r2(modNuts) # conditional 0.526, marginal 0.291
 performance::r2(modMate) # conditional 0.658, marginal 0.071
-
-
 
 ctrl$pred1 <- predict(modCtrl,newdata=ctrl,level=0)
 ctrl$pred2 <- predict(modCtrl,newdata=ctrl,level=1)
