@@ -95,7 +95,7 @@ fitModFunc <- function(form,modType,dat,whichAIC){
 
 #*************************************Model formula*******************************
 m1 <- abortion ~ mAge  + (mAge| adults_id)
-m2 <- abortion ~ mAge + (1| adults_id )
+m2 <- abortion ~ mAge +  (1| adults_id )
 m3 <- abortion ~ mAge 
 m4 <- abortion ~ 1
 #********************************************************************************
@@ -129,10 +129,17 @@ coefSummaryFunc <- function(modelFit,model=1){
 #*****************************************************************************
 
 #************Control treatment*************
-fitm1C <- fitModFunc(form=m1,dat=ctrl,whichAIC="aic",modType="me") # singular fit
-fitm2C <- fitModFunc(form=m2,dat=ctrl,whichAIC="aic",modType="me") 
-fitm3C <- fitModFunc(form=m3,dat=ctrl,whichAIC="aic",modType="fe")
-fitm4C <- fitModFunc(form=m4,dat=ctrl,whichAIC="aic",modType="fe")
+fitm1C <- fitModFunc(form=m1,dat=ctrl,whichAIC="aic",modType="me") # singular fit (with and wo mother age)
+fitm2C <- fitModFunc(form=m2,dat=ctrl,whichAIC="aic",modType="me") # convergence failure
+fitm3C <- fitModFunc(form=m3,dat=ctrl,whichAIC="aic",modType="fe") # fitted probabilities numerically 0 or 1
+fitm4C <- fitModFunc(form=m4,dat=ctrl,whichAIC="aic",modType="fe") # as above
+
+# only 17 observations from females that died before the end of the experiment and only one of these
+# had an abortion
+
+# similarly for mating delay 20 and 2
+
+# however nutritional stress had 134,
 
 summarym2C <- modelSummaryFunc(fitm2C,form=m2)
 summarym3C <- modelSummaryFunc(fitm3C,form=m3)
@@ -251,6 +258,9 @@ mMod <-  glm(m3
 nMod <- glmer(m2
               ,family=binomial
               ,data=nuts)
+
+
+
 #***************************************************************
 # get maternal age coefficient and standard errors
 getParmVals <- function(mod){
@@ -284,9 +294,23 @@ oddsWithAge <- function(age1,age2,interCoef,ageCoef){
   return(exp(age2logOdds-age1logOdds))
 }
 
-oddsWithAge(60,61,nutsCoef[1],nutsCoef[2]) # 4.6% increase
-oddsWithAge(60,61,ctrlCoef[1],ctrlCoef[2]) # 7.2% increase
+oddsWithAge(20,21,nutsCoef[1],nutsCoef[2]) # 4.6% increase
+oddsWithAge(20,21,ctrlCoef[1],ctrlCoef[2]) # 7.2% increase
 
+
+
+m3 <- abortion ~ mAge + motherAgeatDeath
+m4 <- abortion ~ mAge
+nMod1 <- glm(m3
+              ,family=binomial
+              ,data=nuts)
+nMod2 <- glm(m4
+            ,family=binomial
+            ,data=nuts)
+
+(0.039387 - 0.037123)/ sqrt(0.005586^2 + 0.005222^2)
+0.2
+pnorm(-abs(0.2))
 #****************Control*******************
 ilink <- family(cMod)$linkinv
 ctrlP <- with(ctrl,
