@@ -294,8 +294,8 @@ oddsWithAge <- function(age1,age2,interCoef,ageCoef){
   return(exp(age2logOdds-age1logOdds))
 }
 
-oddsWithAge(20,21,nutsCoef[1],nutsCoef[2]) # 4.6% increase
-oddsWithAge(20,21,ctrlCoef[1],ctrlCoef[2]) # 7.2% increase
+oddsWithAge(1,50,nutsCoef[1],nutsCoef[2]) # 4.6% increase
+oddsWithAge(1,50,ctrlCoef[1],ctrlCoef[2]) # 7.2% increase
 
 
 
@@ -311,6 +311,17 @@ nMod2 <- glm(m4
 (0.039387 - 0.037123)/ sqrt(0.005586^2 + 0.005222^2)
 0.2
 pnorm(-abs(0.2))
+
+
+exp(ctrlCoef[2]) /exp(nutsCoef[2])
+
+# if we wish to test the hypothesis that the population odds ration equals one, the two-sided p-value is
+2*P(Z< - L / SE) # where P denotes the probability and Z denotes a standard normal random variable
+# probability that Z is less than abs val L/ SE
+
+# the standard error for the log odds ratio is approximately
+# sqrt (1/n11 + 1/n10 + 1/n01 + 1/n00)
+
 #****************Control*******************
 ilink <- family(cMod)$linkinv
 ctrlP <- with(ctrl,
